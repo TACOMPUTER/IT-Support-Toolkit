@@ -64,15 +64,26 @@ $folderPath = Split-Path $MainScript -Parent
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
 $host.UI.RawUI.WindowTitle = "Running $fileName $adminText"
 
-# Resize Console
-$maxWidth  = $host.UI.RawUI.MaxWindowSize.Width
-$maxHeight = $host.UI.RawUI.MaxWindowSize.Height
-$PSWidth  = [Math]::Min($PSWidth,  $maxWidth)
-$PSHeight = [Math]::Min($PSHeight, $maxHeight)
-[Console]::BufferWidth  = [Math]::Max($PSWidth,  [Console]::BufferWidth)
-[Console]::BufferHeight = [Math]::Max($PSHeight, [Console]::BufferHeight)
-[Console]::WindowWidth  = $PSWidth
-[Console]::WindowHeight = $PSHeight
+# Resize Console (Có bọc chống lỗi Handle khi chạy trực tiếp từ Web URL)
+try {
+    $maxWidth  = $host.UI.RawUI.MaxWindowSize.Width
+    $maxHeight = $host.UI.RawUI.MaxWindowSize.Height
+    $PSWidth  = [Math]::Min($PSWidth,  $maxWidth)
+    $PSHeight = [Math]::Min($PSHeight, $maxHeight)
+    
+    [Console]::BufferWidth  = [Math]::Max($PSWidth,  [Console]::BufferWidth)
+    [Console]::BufferHeight = [Math]::Max($PSHeight, [Console]::BufferHeight)
+    [Console]::WindowWidth  = $PSWidth
+    [Console]::WindowHeight = $PSHeight
+} catch {
+    # Nếu không lấy được console handle khi chạy qua IE/URL, sử dụng Host UI thay thế
+    try {
+        $size = $host.UI.RawUI.WindowSize
+        $size.Width = $PSWidth
+        $size.Height = $PSHeight
+        $host.UI.RawUI.WindowSize = $size
+    } catch {}
+}
 
 # Move Window
 if (-not ("WinMove" -as [type])) {
