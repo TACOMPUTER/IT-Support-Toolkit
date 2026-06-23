@@ -427,3 +427,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Chặn các file rác phát sinh trong quá trình chạy Tool IT
+**/IT/Library/*
+**/*.html
+**/*.lnk
+**/variable_IT.ps1
+**/Reports/
