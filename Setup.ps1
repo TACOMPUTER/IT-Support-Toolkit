@@ -1,10 +1,7 @@
-# Setup.ps1 - Deploy bộ tool IT từ GitHub Private Repository (Cấu trúc phẳng mới)
+# Setup.ps1 - Deploy bộ tool IT từ GitHub Public Repository
 # Chạy với quyền Administrator
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-# KHAI BÁO TOKEN BẢO MẬT (Do Repo là Private)
-$PATToken = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
 
 # ĐƯỜNG DẪN ĐÍCH
 $TargetDir = "C:\SW\cmd-Powershell"
@@ -14,47 +11,40 @@ New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
 
 Write-Host "📥 Đang tải bộ công cụ IT Support từ GitHub..." -ForegroundColor Cyan
 
-$zipUrl = "https://api.github.com/repos/TACOMPUTER/IT-Support-Toolkit/zipball/main"
-$zipFile = "$env:TEMP\it_toolkit.zip"
-
-$headers = @{
-    Authorization = "Bearer $PATToken"
-    Accept        = "application/vnd.github+json"
-}
+# Link tải zip công khai sạch, không cần token lằng nhằng
+$zipUrl = "https://github.com/TACOMPUTER/IT-Support-Toolkit/archive/refs/heads/main.zip"
+$zipFile = Join-Path $env:TEMP "it_toolkit.zip"
 
 try {
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -Headers $headers -ErrorAction Stop
+    Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -ErrorAction Stop
 } catch {
-    Write-Host "❌ Lỗi: Không thể tải file từ GitHub. Kiểm tra lại PAT Token!`n$($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "❌ Lỗi: Không thể tải file từ GitHub. Kiểm tra lại kết nối mạng!`n$($_.Exception.Message)" -ForegroundColor Red
     exit
 }
 
 Write-Host "📦 Đang giải nén và cấu trúc lại thư mục..." -ForegroundColor Cyan
-$ExtractPath = "$env:TEMP\it_extracted"
+$ExtractPath = Join-Path $env:TEMP "it_extracted"
 if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
 
 Expand-Archive -Path $zipFile -DestinationPath $ExtractPath -Force
 
-# Tìm thư mục gốc do GitHub tự sinh ra khi giải nén
 $RepoFolder = Get-ChildItem -Path $ExtractPath -Directory | Select-Object -First 1
 
 if ($RepoFolder) {
-    # Đường dẫn nguồn hiện tại đã bỏ Software/OS Tools, chỉ còn đi thẳng vào cmd-Powershell
     $SourcePath = Join-Path $RepoFolder.FullName "cmd-Powershell"
-    
     if (Test-Path $SourcePath) {
-        # Copy toàn bộ nội dung bên trong cmd-Powershell về C:\SW\cmd-Powershell
         Copy-Item -Path "$SourcePath\*" -Destination $TargetDir -Recurse -Force
     } else {
-        Write-Host "❌ Lỗi: Không tìm thấy thư mục 'cmd-Powershell' trong gói tải về!" -ForegroundColor Red
+        Write-Host "❌ Lỗi: Không tìm thấy thư mục 'cmd-Powershell' trong gói giải nén!" -ForegroundColor Red
         exit
     }
 }
 
-Remove-Item $zipFile -Force
-Remove-Item $ExtractPath -Recurse -Force
+# Dọn dẹp sạch sẽ file tạm
+if (Test-Path $zipFile) { Remove-Item $zipFile -Force }
+if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
 
-# KHỞI CHẠY KHÔNG SỢ SAI ĐƯỜNG DẪN (Đã cập nhật sang IT_Github.ps1)
+# KHỞI CHẠY TOOL CHÍNH
 $LaunchFile = Join-Path $TargetDir "IT_Github.ps1"
 if (Test-Path $LaunchFile) {
     Write-Host "🚀 Khởi chạy Tool..." -ForegroundColor Green
