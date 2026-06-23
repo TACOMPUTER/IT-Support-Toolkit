@@ -26,7 +26,7 @@ public class WinAPI {
 $consoleHandle = [WinAPI]::GetConsoleWindow()
 
 
-# 🚩 <<<--- XÁC ĐỊNH SCRIPT PATH CHUẨN (FIX CALLSTACK & REMOTE RUN) --->>>
+# 🚩 <<<--- XÁC ĐỊNH SCRIPT PATH CHUẨN --->>>
 $callStack = Get-PSCallStack
 if ($callStack.Count -gt 1 -and $callStack[1].ScriptName) {
     $MainScript = $callStack[-1].ScriptName
@@ -39,7 +39,7 @@ $CurrentScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $Mai
 # 🏁 <<<--- END --->>>
 
 
-# 🚩 <<<--- CHECK ADMIN (BỎ LẶP CODE) --->>>
+# 🚩 <<<--- CHECK ADMIN --->>>
 $IsAdmin = ([Security.Principal.WindowsPrincipal] `
     [Security.Principal.WindowsIdentity]::GetCurrent()
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -151,7 +151,6 @@ $LibScript   = Join-Path $ITScriptRoot "IT\Library"
 $IT113Script = Join-Path $ITScriptRoot "IT\IT-113"
 $IT115Script = Join-Path $ITScriptRoot "IT\IT-115"
 
-# Nhận diện thư mục Software gốc (Vì script nằm ở C:\SW\cmd-Powershell)
 $SourceSW = Split-Path $ITScriptRoot -Parent    # Kết quả trả về: C:\SW
 
 if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
@@ -285,11 +284,11 @@ function Show-Menu-IT {
     # THÔNG TIN CƠ BẢN MÁY TÍNH
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
-        Write-Host "<<< Laptop Information >>>" -ForegroundColor Cyan
-        $script:ReportLines.Add("<span class='cyan'>&lt;&lt;&lt; Laptop Information &gt;&gt;&gt;</span>")
+        Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
+        $script:ReportLines.Add("<span class='cyan'>[ Laptop Information ]</span>")
     } else {
-        Write-Host "<<< PC Information >>>" -ForegroundColor Cyan
-        $script:ReportLines.Add("<span class='cyan'>&lt;&lt;&lt; PC Information &gt;&gt;&gt;</span>")
+        Write-Host "[ PC Information ]" -ForegroundColor Cyan
+        $script:ReportLines.Add("<span class='cyan'>[ PC Information ]</span>")
     }
 
     $global:LabelWidth = 18
@@ -301,7 +300,8 @@ function Show-Menu-IT {
         $htmlLine = "<span class='green'>$htmlLabel   &gt;&gt;&gt; </span><span class='yellow'>$value</span>"
         $script:ReportLines.Add($htmlLine)
 
-        Write-Host ("{0,-$global:LabelWidth}   >>> " -f $label) -NoNewline -ForegroundColor Green
+        $formatLabel = "{0,-$global:LabelWidth}" -f $label
+        Write-Host "$formatLabel   >>> " -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
@@ -311,7 +311,8 @@ function Show-Menu-IT {
         $htmlLine = "<span class='blue'>  $htmlSubLabel&rarr; $value</span>"
         $script:ReportLines.Add($htmlLine)
 
-        Write-Host ("  {0,-$global:SubLabelWidth}-> " -f $label) -NoNewline -ForegroundColor Blue
+        $formatSubLabel = "{0,-$global:SubLabelWidth}" -f $label
+        Write-Host "  $formatSubLabel-> " -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
 
@@ -476,16 +477,24 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
     Write-Host $SourceSW -ForegroundColor Yellow
     Write-Host "Current 'SOFTWARE2' path  >>> " -NoNewline -ForegroundColor Cyan
     if (Test-Path $SourceSW2) { Write-Host $SourceSW2 -ForegroundColor Yellow } else { Write-Host "Đường dẫn SOFTWARE2 không tồn tại" -ForegroundColor Red }
+    
     Write-Host "Shortcut 'IT_Github.exe.lnk' exists in >>> " -NoNewline -ForegroundColor Cyan
-
-    if (Test-Path $SystemDriveSWlnk) { Write-Host $SystemDriveSW -NoNewline -ForegroundColor Yellow } else { Write-Host $SystemDriveSW " (không tồn tại)" -NoNewline -ForegroundColor Red }
+    if (Test-Path $SystemDriveSWlnk) { 
+        Write-Host $SystemDriveSW -NoNewline -ForegroundColor Yellow 
+    } else { 
+        Write-Host "$SystemDriveSW (khong ton tai)" -NoNewline -ForegroundColor Red 
+    }
+    
     Write-Host " & " -NoNewline -ForegroundColor Cyan
-
-    if (Test-Path $ExpandedStartMenuLnk) { Write-Host $StartMenuShortPath -ForegroundColor Yellow } else { Write-Host $StartMenuShortPath " (không tồn tại)" -ForegroundColor Red }
+    if (Test-Path $ExpandedStartMenuLnk) { 
+        Write-Host $StartMenuShortPath -ForegroundColor Yellow 
+    } else { 
+        Write-Host "$StartMenuShortPath (khong ton tai)" -ForegroundColor Red 
+    }
     Write-Host ("+" * $Host.UI.RawUI.WindowSize.Width) -ForegroundColor DarkGray
 
     # WINDOWS DEFENDER EXCLUSION
-    Write-Host "<<< Current 'Windows Security\Exclusions' list >>>" -ForegroundColor Cyan
+    Write-Host "[ Current Windows Security Exclusions List ]" -ForegroundColor Cyan
     $preferences = Get-MpPreference
     
     [string[]]$paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
