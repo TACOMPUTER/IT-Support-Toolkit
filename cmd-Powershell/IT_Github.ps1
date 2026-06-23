@@ -191,7 +191,7 @@ function Run-IT-xxx {
 }
 
 function Show-Menu-IT {
-    # Clear-Host
+    Clear-Host
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
     Write-Host ("+" * 75) -ForegroundColor DarkGray
