@@ -130,17 +130,32 @@ $ITScriptRoot = $CurrentScriptRoot
 $LibScript   = Join-Path $ITScriptRoot "IT\Library"
 $IT113Script = Join-Path $ITScriptRoot "IT\IT-113"
 $IT115Script = Join-Path $ITScriptRoot "IT\IT-115"
-$SourceSW = Split-Path $ITScriptRoot -Parent
+# Tự động quét tìm đường dẫn Software thực tế trên các ổ đĩa của máy
+$TargetFolder = "OneDrive\TACOMPUTER\Software"
+$SourceSW = "C:\SW" # Giá trị mặc định nếu không tìm thấy ổ nào khác
 
+# Quét qua tất cả các ổ đĩa đang sẵn sàng (Fixed, Removable...) trừ ổ C ra cho nhanh
+$AllDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.Name -ne "C:\" }
+foreach ($d in $AllDrives) {
+    $CheckPath = Join-Path $d.Name $TargetFolder
+    if (Test-Path $CheckPath) {
+        $SourceSW = $CheckPath
+        break
+    }
+}
+
+# Nếu quét các ổ khác không thấy, thử tìm ngay trên ổ C
+if ($SourceSW -eq "C:\SW") {
+    $CheckC = Join-Path "C:\" $TargetFolder
+    if (Test-Path $CheckC) { $SourceSW = $CheckC }
+}
+
+# Tính toán đường dẫn SOFTWARE2 dựa trên SOFTWARE vừa tìm được
 if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
-    $drive = ([System.IO.Path]::GetPathRoot($SourceSW))
+    $drive = [System.IO.Path]::GetPathRoot($SourceSW)
     $SourceSW2 = Join-Path $drive "Software2"
-} elseif ($SourceSW -match "^[A-Z]:\\Software$") {
-    $SourceSW2 = $SourceSW + "2"
-} elseif ($SourceSW -match "^\\\\.*\\Software$") {
-    $SourceSW2 = $SourceSW + "2"
 } else {
-    $SourceSW2 = $SourceSW + "2" 
+    $SourceSW2 = $SourceSW + "2"
 }
 
 $SystemDriveSW         = "C:\SW"
