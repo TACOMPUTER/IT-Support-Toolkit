@@ -194,9 +194,19 @@ function Show-Menu-IT {
     Clear-Host
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
-    Write-Host ("+" * 75) -ForegroundColor DarkGray
-    Write-Host "+++ IT support, Scripted by TACOMPUTER & GPT +++" -ForegroundColor Cyan
-    Write-Host ("+" * 75) -ForegroundColor DarkGray
+    # LOGO IT - Tu dong co gian linh hoat theo chieu rong cua so console
+    $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
+    $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
+
+    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+    $text = " IT support, Scripted by TACOMPUTER & GPT, 0933.848.990 "
+    $pad = [Math]::Max(0, $LineWidth - $text.Length)
+    $left  = [Math]::Floor($pad / 2)
+    $right = $pad - $left
+    Write-Host ("+" * $left) -ForegroundColor DarkGray -NoNewline
+    Write-Host $text -NoNewline
+    Write-Host ("+" * $right) -ForegroundColor DarkGray
+    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
 
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
@@ -282,7 +292,7 @@ function Show-Menu-IT {
     if (!$version) { $version = $RegOS.ReleaseId }
     Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
     Show-Line "Current User" $currentUser
-    Write-Host ("+" * 75) -ForegroundColor DarkGray
+    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
     # Export HTML
     $Serial = $BIOS.SerialNumber
@@ -297,14 +307,14 @@ function Show-Menu-IT {
     # Ktra Path
     Show-Line "SOFTWARE Path" $SourceSW
     Show-Line "SOFTWARE2 Path" $SourceSW2
-    Write-Host ("+" * 75) -ForegroundColor DarkGray
+    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
 
     # Exclusions
     Write-Host "[ Current Defender Exclusions ]" -ForegroundColor Cyan
     $preferences = Get-MpPreference
     [string[]]$paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("None") }
     foreach ($p in $paths) { Write-Host " - Path: $p" -ForegroundColor Yellow }
-    Write-Host ("+" * 75) -ForegroundColor DarkGray
+    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
 
     Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
     $topMenu = Read-Host
