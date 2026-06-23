@@ -9,20 +9,20 @@ $TargetDir = "C:\SW\cmd-Powershell"
 if (Test-Path $TargetDir) { Remove-Item $TargetDir -Recurse -Force -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
 
-Write-Host "📥 Đang tải bộ công cụ IT Support từ GitHub..." -ForegroundColor Cyan
+Write-Host "📥 Dang tai bo cong cu IT Support tu GitHub..." -ForegroundColor Cyan
 
-# Link tải zip công khai sạch, không cần token lằng nhằng
+# Link tải zip công khai không cần token
 $zipUrl = "https://github.com/TACOMPUTER/IT-Support-Toolkit/archive/refs/heads/main.zip"
 $zipFile = Join-Path $env:TEMP "it_toolkit.zip"
 
 try {
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -ErrorAction Stop
 } catch {
-    Write-Host "❌ Lỗi: Không thể tải file từ GitHub. Kiểm tra lại kết nối mạng!`n$($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "❌ Loi: Khong the tai file tu GitHub. Kiem tra lai ket noi mang!`n$($_.Exception.Message)" -ForegroundColor Red
     exit
 }
 
-Write-Host "📦 Đang giải nén và cấu trúc lại thư mục..." -ForegroundColor Cyan
+Write-Host "📦 Dang giai nen va cau truc lai thu muc..." -ForegroundColor Cyan
 $ExtractPath = Join-Path $env:TEMP "it_extracted"
 if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
 
@@ -35,7 +35,7 @@ if ($RepoFolder) {
     if (Test-Path $SourcePath) {
         Copy-Item -Path "$SourcePath\*" -Destination $TargetDir -Recurse -Force
     } else {
-        Write-Host "❌ Lỗi: Không tìm thấy thư mục 'cmd-Powershell' trong gói giải nén!" -ForegroundColor Red
+        Write-Host "❌ Loi: Khong tim thay thu mục 'cmd-Powershell' trong goi giai nen!" -ForegroundColor Red
         exit
     }
 }
@@ -47,9 +47,9 @@ if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
 # KHỞI CHẠY TOOL CHÍNH
 $LaunchFile = Join-Path $TargetDir "IT_Github.ps1"
 if (Test-Path $LaunchFile) {
-    Write-Host "🚀 Khởi chạy Tool..." -ForegroundColor Green
+    Write-Host "🚀 Khoi chay Tool..." -ForegroundColor Green
     Set-Location $TargetDir
     & ".\IT_Github.ps1"
 } else {
-    Write-Host "❌ Lỗi: Không tìm thấy file IT_Github.ps1 tại $TargetDir" -ForegroundColor Red
+    Write-Host "❌ Loi: Khong tim thay file IT_Github.ps1 tai $TargetDir" -ForegroundColor Red
 }
