@@ -1,3 +1,21 @@
+# =====================================================
+# LINE TEST TẠM THỜI - XÓA SAU KHI CHẠY OK
+# =====================================================
+Clear-Host
+Write-Host "====== [DEBUG] DA VAO DUOC FILE IT-113.PS1 ======" -ForegroundColor Magenta
+Write-Host "Thu muc dang dung (PSScriptRoot): $PSScriptRoot" -ForegroundColor Cyan
+Read-Host "Bam Enter de tiep tuc load cac thong so he thong..."
+# =====================================================
+
+# 🚩 <<<--- 'VARIABLE_IT.PS1' --->>>
+$SystemDriveSW = "C:\SW"
+if (Test-Path "$SystemDriveSW\variable_IT.ps1") {
+    . "$SystemDriveSW\variable_IT.ps1"
+}
+# 🏁 <<<--- 'VARIABLE_IT.PS1' --->>>
+
+# ... (các đoạn code phía dưới giữ nguyên)
+
 # 🚩 <<<--- 'VARIABLE_IT.PS1' --->>>
 $SystemDriveSW = "C:\SW"
 if (Test-Path "$SystemDriveSW\variable_IT.ps1") {
