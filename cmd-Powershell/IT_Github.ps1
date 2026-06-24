@@ -172,7 +172,6 @@ try {
 # KHU VỰC CORE TIẾN TRÌNH CON - CHẠY HOÀN TOÀN TRÊN RAM
 # =====================================================
 
-# --- MENU 113 CHẠY TRÊN RAM ---
 function Invoke-IT113-Menu {
     $requiredPaths = @("\\IT\Software", "\\IT\Software2", "\\IT-E580\Software", "\\IT-E580\Software2", "C:\SW")
     $validDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -in 2,3 }
@@ -233,7 +232,6 @@ function Invoke-IT113-Menu {
     }
 }
 
-# --- MENU 115 CHẠY TRÊN RAM ---
 function Invoke-IT115-Menu {
     Clear-Host
     Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
@@ -243,10 +241,33 @@ function Invoke-IT115-Menu {
 
 
 # =====================================================
+# ⚡️ KHU VỰC THU THẬP PHẦN CỨNG (QUÉT 1 LẦN DUY NHẤT LÚC KHỞI ĐỘNG)
+# =====================================================
+Write-Host "🔍 Chuan bi thong tin xac thuc phan cung..." -ForegroundColor Cyan
+
+$global:CS      = Get-CimInstance Win32_ComputerSystem
+$global:BB      = Get-CimInstance Win32_BaseBoard
+$global:CPU     = Get-CimInstance Win32_Processor
+$global:BIOS    = Get-CimInstance Win32_BIOS
+$global:GPU     = Get-CimInstance Win32_VideoController
+$global:OS      = Get-CimInstance Win32_OperatingSystem
+$global:RegOS   = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+$global:RAM     = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
+$global:Arrays  = Get-CimInstance Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue
+$global:Disks   = Get-CimInstance Win32_DiskDrive
+$global:NetAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.MACAddress -and $_.PhysicalAdapter -eq $true }
+
+
+# =====================================================
 # GIAO DIỆN MENU CHÍNH (MAIN MENU)
 # =====================================================
 function Show-Menu-IT {
     Clear-Host
+    
+    # Ép giải phóng bộ nhớ cũ trước khi nạp phiên mới
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+    
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
@@ -296,38 +317,29 @@ function Show-Menu-IT {
         Write-Host $value -ForegroundColor Blue
     }
 
-    $CS      = Get-CimInstance Win32_ComputerSystem
-    $BB      = Get-CimInstance Win32_BaseBoard
-    $CPU     = Get-CimInstance Win32_Processor
-    $BIOS    = Get-CimInstance Win32_BIOS
-    $GPU     = Get-CimInstance Win32_VideoController
-    $OS      = Get-CimInstance Win32_OperatingSystem
-    $RegOS   = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
-
-    Show-Line "Brand (OEM)" $CS.Manufacturer
-    Show-Line "Mainboard" $BB.Manufacturer
-    Show-Line "Product" $BB.Product
-    Show-Line "Model" $CS.Model
-    Show-Line "Serial" $BIOS.SerialNumber
-    Show-Line "BIOS ver" $BIOS.SMBIOSBIOSVersion
+    # Đọc dữ liệu từ biến Static, không gọi lệnh Get-CimInstance lặp lại nữa
+    Show-Line "Brand (OEM)" $global:CS.Manufacturer
+    Show-Line "Mainboard" $global:BB.Manufacturer
+    Show-Line "Product" $global:BB.Product
+    Show-Line "Model" $global:CS.Model
+    Show-Line "Serial" $global:BIOS.SerialNumber
+    Show-Line "BIOS ver" $global:BIOS.SMBIOSBIOSVersion
     Write-Host ""
     $script:ReportLines.Add("") 
 
-    if ($CPU.Count -gt 1) {
+    if ($global:CPU.Count -gt 1) {
         Show-Line "CPU" ""
-        $i = 1; foreach ($c in $CPU) { Show-SubLine "CPU $i" $c.Name; $i++ }
-    } else { Show-Line "CPU" $CPU.Name }
+        $i = 1; foreach ($c in $global:CPU) { Show-SubLine "CPU $i" $c.Name; $i++ }
+    } else { Show-Line "CPU" $global:CPU.Name }
 
     # RAM Info
-    $RAM = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
-    $arrays = Get-CimInstance Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue
-    $ramType = if ($arrays.MemoryErrorCorrection -in 5,6) { "ECC" } else { "Non-ECC" }
-    $totalRAM = "{0:N0}" -f (($RAM | Measure-Object Capacity -Sum).Sum / 1GB)
+    $ramType = if ($global:Arrays.MemoryErrorCorrection -in 5,6) { "ECC" } else { "Non-ECC" }
+    $totalRAM = "{0:N0}" -f (($global:RAM | Measure-Object Capacity -Sum).Sum / 1GB)
     Show-Line "RAM (Total)" "$totalRAM GB ($ramType)"
     
     $trueUsedSlots = 0
     $i = 1
-    foreach ($ram in $RAM) {
+    foreach ($ram in $global:RAM) {
         $size = "{0:N0}" -f ($ram.Capacity / 1GB)
         $slot = if ($ram.DeviceLocator) { $ram.DeviceLocator.Trim() } else { "Slot $i" }
         $manufacturer = if ($ram.Manufacturer) { $ram.Manufacturer.Trim() } else { "Unknown" }
@@ -337,27 +349,25 @@ function Show-Menu-IT {
         Show-SubLine $slot $RamDetails
         $i++; $trueUsedSlots++
     }
-    $TotalSlots = if ($arrays) { @($arrays)[0].MemoryDevices } else { 2 }
+    $TotalSlots = if ($global:Arrays) { @($global:Arrays)[0].MemoryDevices } else { 2 }
     Show-SubLine "Used Slots" "$trueUsedSlots/$TotalSlots"
 
     # Disk Info
-    $disks = Get-CimInstance Win32_DiskDrive
-    $totalDisk = "{0:N0}" -f (($disks | Measure-Object Size -Sum).Sum / 1GB)
+    $totalDisk = "{0:N0}" -f (($global:Disks | Measure-Object Size -Sum).Sum / 1GB)
     Show-Line "Storage (Total)" "$totalDisk GB"
-    $i = 1; foreach ($disk in $disks) { Show-SubLine "Disk $i" ("{0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
+    $i = 1; foreach ($disk in $global:Disks) { Show-SubLine "Disk $i" ("{0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
 
     # GPU Info
     $vgaCount = 0; $gpuCount = 0
-    foreach ($g in $GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
+    foreach ($g in $global:GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
-    foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
+    foreach ($g in $global:GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
     Write-Host ""
     $script:ReportLines.Add("")
     
     # MAC Info
     Show-Line "MAC Address" ""
-    $netAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.MACAddress -and $_.PhysicalAdapter -eq $true }
-    foreach ($adapter in $netAdapters) {
+    foreach ($adapter in $global:NetAdapters) {
         $Type = "LAN"
         if ($adapter.Name -match "Wireless|Wi-Fi|802.11") { $Type = "Wi-Fi" }
         elseif ($adapter.Name -match "Bluetooth") { $Type = "Bluetooth" }
@@ -370,19 +380,18 @@ function Show-Menu-IT {
     Write-Host ""
     $script:ReportLines.Add("")
 
-    $version = $RegOS.DisplayVersion
-    if (!$version) { $version = $RegOS.ReleaseId }
-    Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
+    $version = $global:RegOS.DisplayVersion
+    if (!$version) { $version = $global:RegOS.ReleaseId }
+    Show-Line "Windows" "$($global:RegOS.ProductName) | $version | $($global:RegOS.CurrentBuild)"
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
     # --- 🚩 EXPORT HTML ---
-    $Serial = $BIOS.SerialNumber
-    $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
+    $Serial = $global:BIOS.SerialNumber
+    $CleanModel = ($global:CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
-    # KHẮC PHỤC TRIỆT ĐỂ: Dùng chuỗi thô đóng băng toàn bộ, chừa cổng kết nối riêng biệt không xài toán tử `-f` lên CSS
     $HtmlTemplate = @'
 <!DOCTYPE html>
 <html>
@@ -401,7 +410,6 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 <body><pre></pre></body>
 </html>
 '@
-    # Swap dữ liệu trực tiếp bằng phương thức Replace của .NET chống crash chuỗi
     $HtmlContent = $HtmlTemplate.Replace("", $Serial).Replace("", $Content)
     
     # --- 1. LUÔN LUÔN GHI LOCAL TRƯỚC ---
@@ -457,7 +465,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
     }
 }
 
-# Vòng lặp duy trì giao diện
+# Vòng lặp duy trì giao diện mượt mà không ngốn RAM
 while ($true) { 
     Show-Menu-IT 
 }
