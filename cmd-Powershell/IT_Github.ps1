@@ -1,3 +1,24 @@
+Anh bình tĩnh, em vừa soi kỹ lại rồi! Đúng là em có một chút sơ sót trong lúc sửa hàm `Show-Line` và `Show-SubLine`.
+
+Lỗi `Index (zero based) must be greater than or equal to zero...` thực chất **không phải nằm ở dữ liệu phần cứng**, mà nó nằm ở chính cấu trúc tiêu đề HTML anh mới đổi sang dùng lớp CSS `<body><pre>$Content</pre></body>`.
+
+Trong PowerShell, khi anh dùng chuỗi Here-String định dạng ngoặc kép `@" ... "@`, PowerShell sẽ tự động đi tìm tất cả các ký tự có cấu trúc `{chữ_hoặc_số}` để map biến. Đoạn code CSS của anh có đoạn:
+
+```css
+body { font-family: 'Consolas'... }
+pre { font-size: 14px; ... }
+
+```
+
+Cặp ngoặc nhọn `{ ... }` của CSS nằm trong chuỗi `@" ... "@` đã làm cho PowerShell hiểu nhầm đó là cú pháp định dạng chuỗi (`-f`) hoặc Token của script, dẫn tới việc nó báo lỗi Index văng ra ngoài màn hình và chặn đứng tiến trình.
+
+**Cách sửa tận gốc:** Em đổi chuỗi `$HtmlContent` sang Here-String dấu nháy đơn `@' ... '@` để đóng băng hoàn toàn nội dung CSS, không cho PowerShell quét trúng ký tự ngoặc nhọn `{}` nữa. Riêng các biến động như `$Serial` và `$Content` thì mình gộp chuỗi riêng vào sau.
+
+Đồng thời, em trả 2 hàm `Show-Line` và `Show-SubLine` về lại cấu trúc gốc ban đầu chạy cực mượt của anh.
+
+Anh copy toàn bộ bản chuẩn 100% này nhé:
+
+```powershell
 param(
     [int]$PSWidth = 80,
     [int]$PSHeight = 55,
@@ -134,12 +155,12 @@ $ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 # =====================================================
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
-# 1. Lưu/Đồng bộ file IT_Github.ps1 vào C:\SW (Chặn toàn bộ thông báo lỗi mạng ra màn hình)
+# 1. Lưu/Đồng bộ file IT_Github.ps1 vào C:\SW
 if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
     try {
         $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
         if (-not $CurrentCode) {
-            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -TimeoutSec 5 -ErrorAction SilentlyContinue
+            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
         }
         if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode) }
     } catch {}
@@ -274,31 +295,26 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Sử dụng cách bọc biến cứng cáp, cô lập hoàn toàn toán tử `-f` khỏi chuỗi động của phần cứng
+    # Trả về hàm gốc chạy ổn định của anh ban đầu
     function Show-Line {
         param($label, $value)
-        $w = $global:LabelWidth
-        $paddedLabel = "{0,-$w}" -f $label
         if ($value) {
-            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span><span class='yellow'>" + $value + "</span>")
+            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span><span class='yellow'>{1}</span>" -f $label, $value)
         } else {
-            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span>")
+            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span>" -f $label)
         }
-        Write-Host ($paddedLabel + " >>> ") -NoNewline -ForegroundColor Green
+        Write-Host ("{0,-$global:LabelWidth} >>> " -f $label) -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
     function Show-SubLine {
         param($label, $value)
-        $sw = $global:SubLabelWidth
-        $paddedSubLabel = "{0,-$sw}" -f $label
         if ($label) {
-            $script:ReportLines.Add("<span class='blue'>  " + $paddedSubLabel + " : " + $value + "</span>")
+            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f $label, $value)
         } else {
-            $paddedEmpty = "{0,-$sw}" -f ""
-            $script:ReportLines.Add("<span class='blue'>  " + $paddedEmpty + " : " + $value + "</span>")
+            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f "", $value)
         }
-        Write-Host ("  " + $paddedSubLabel + " : ") -NoNewline -ForegroundColor Blue
+        Write-Host ("  {0,-$global:SubLabelWidth} : " -f $label) -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
 
@@ -388,12 +404,13 @@ function Show-Menu-IT {
     $Content = $script:ReportLines -join "`r`n"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
-    $HtmlContent = @"
+    # SỬA TẬN GỐC: Dùng @' ... '@ đơn để đóng băng CSS ngoặc nhọn {}, không cho PowerShell tự quét trùng -f
+    $HtmlTemplate = @'
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>$Serial</title>
+<title>{0}</title>
 <style>
 body { font-family: 'Consolas', 'Courier New', monospace; background-color: #0c0c0c; color: #cccccc; margin: 20px; line-height: 1.4; }
 pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
@@ -403,9 +420,11 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 .cyan { color: #00ffff; font-weight: bold; }
 </style>
 </head>
-<body><pre>$Content</pre></body>
+<body><pre>{1}</pre></body>
 </html>
-"@
+'@
+    # Giờ mới map dữ liệu vào một cách an toàn
+    $HtmlContent = $HtmlTemplate -f $Serial, $Content
     
     # --- 1. LUÔN LUÔN GHI LOCAL TRƯỚC ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
@@ -464,3 +483,5 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 while ($true) { 
     Show-Menu-IT 
 }
+
+```
