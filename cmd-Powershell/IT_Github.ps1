@@ -345,10 +345,9 @@ function Show-Menu-IT {
         New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null 
     }
     $HtmlFile = Join-Path $LocalFolder $FileNameReport
-    if (Test-Path $HtmlFile) { 
-        Remove-Item -Path $HtmlFile -Force -ErrorAction SilentlyContinue 
-    }
-    $HtmlContent | Set-Content $HtmlFile -Force
+    
+    # 1. Ghi file Local (Không cần Remove-Item trước)
+    [System.IO.File]::WriteAllText($HtmlFile, $HtmlContent)
 
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
@@ -359,11 +358,11 @@ function Show-Menu-IT {
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
-            if (Test-Path $NetworkFile) { 
-                Remove-Item -Path $NetworkFile -Force -ErrorAction SilentlyContinue 
-            }
-            $HtmlContent | Set-Content $NetworkFile -Force
-            Write-Host "[ONLINE] OK -> Da xoa file cu va cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
+            
+            # 2. Ghi file lên Server (Đã sửa từ $HtmlFile thành $NetworkFile và bỏ Remove-Item)
+            [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
+            
+            Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
             Write-Host "[ONLINE] OK -> Nhung folder mang chan quyen ghi/xoa!" -ForegroundColor Red
         }
