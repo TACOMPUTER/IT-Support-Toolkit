@@ -49,12 +49,17 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
 }
 
 # Chỉ cho 1 script chạy
-$currentPID = $PID
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
-    $_.ProcessId -ne $currentPID -and
-    ($_.CommandLine -match "IT_Github-call.ps1" -or $_.CommandLine -match "Invoke-Expression")
-} | ForEach-Object {
-    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
+# Chờ 1 giây để đảm bảo tiến trình đã định hình xong tiêu đề
+Start-Sleep -Seconds 1
+
+$targetTitle = "Running IT_Github.ps1"
+$processList = Get-Process | Where-Object { $_.MainWindowTitle -like "*$targetTitle*" -and $_.Id -ne $PID }
+
+foreach ($p in $processList) {
+    try { 
+        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue 
+        Write-Host "Đã đóng phiên bản cũ (PID: $($p.Id))..." -ForegroundColor DarkGray
+    } catch {}
 }
 
 # Title giao diện
