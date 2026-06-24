@@ -6,10 +6,6 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
-# Force mã hóa Console sang UTF-8 để hiển thị tiếng Việt có dấu không bị lỗi font
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
-
 # Thống nhất đường dẫn cục bộ tại C:\SW
 $SystemDriveSW  = "C:\SW"
 $LocalScriptPath = Join-Path $SystemDriveSW "IT_Github.ps1"
@@ -39,7 +35,7 @@ $consoleHandle = [WinAPI]::GetConsoleWindow()
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $SkipAdminCheck -and -not $IsAdmin) {
-    Write-Host "⚠️ Đang nâng quyền Administrator..." -ForegroundColor Yellow
+    Write-Host "⚠️ Dang nang quyen Administrator..." -ForegroundColor Yellow
     if (Test-Path $LocalScriptPath) {
         Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`"" -Verb RunAs
     } else {
@@ -57,7 +53,7 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
     try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
 
-# Title giao diện
+# Title giao diện (Đã cập nhật theo cấu trúc đường dẫn Github anh yêu cầu)
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
 $host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Github\cmd-Powershell"
 
@@ -145,14 +141,14 @@ if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.M
         if (-not $CurrentCode) {
             $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
         }
-        if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode, [System.Text.Encoding]::UTF8) }
+        if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode) }
     } catch {}
 }
 
 # 2. Sao chép file IT_Github.exe vào C:\SW
 if (Test-Path $ExeSourcePath) {
     Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
-    Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
+    Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
 }
 
 # 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe vừa chép
@@ -168,7 +164,7 @@ try {
     $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
     $ShortcutStartMenu.Save()
 } catch {
-    Write-Host "[WARNING] Không thể tạo shortcut Start Menu!" -ForegroundColor Yellow
+    Write-Host "[WARNING] Khong the tao shortcut Start Menu!" -ForegroundColor Yellow
 }
 
 
@@ -201,7 +197,7 @@ function Invoke-IT113-Menu {
         $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
         $LineWidth = [Math]::Max(40, $ConsoleWidth - 1)
 
-        Write-Host "<<< Danh sách 'Windows Security\Exclusions' hiện tại >>>" -ForegroundColor Cyan
+        Write-Host "<<< Current 'Windows Security\Exclusions' list >>>" -ForegroundColor Cyan
         $preferences = Get-MpPreference
         $paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
         $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
@@ -214,25 +210,25 @@ function Invoke-IT113-Menu {
         Write-Host "111. Quay lại Menu chính" -ForegroundColor Gray
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
         
-        $choice = Read-Host "Vui lòng nhập số (1-3 hoặc 111)"
+        $choice = Read-Host "Vui long nhap so (1-3 hoac 111)"
         switch ($choice) {
             '1' { 
                 Clear-Host
-                Write-Host "🚀 Đang chạy: Windows Deployment hoàn toàn trên RAM..." -ForegroundColor Green
-                Read-Host "`nNhấn Enter để quay lại Menu IT-113..."
+                Write-Host "🚀 Dang chay: Windows Deployment hoan toan tren RAM..." -ForegroundColor Green
+                Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '2' { 
                 Clear-Host
-                Write-Host "🚀 Đang chạy: Fix Network & Update Firmware trên RAM..." -ForegroundColor Green
-                Read-Host "`nNhấn Enter để quay lại Menu IT-113..."
+                Write-Host "🚀 Dang chay: Fix Network & Update Firmware tren RAM..." -ForegroundColor Green
+                Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '3' { 
                 Clear-Host
-                Write-Host "🚀 Đang chạy: Tiện ích SW2 trên RAM..." -ForegroundColor Green
-                Read-Host "`nNhấn Enter để quay lại Menu IT-113..."
+                Write-Host "🚀 Dang chay: Tien ich SW2 tren RAM..." -ForegroundColor Green
+                Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '111' { return } 
-            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep -Seconds 1 }
+            default { Write-Host "Lua chon khong hop le!"; Start-Sleep -Seconds 1 }
         }
     }
 }
@@ -241,7 +237,7 @@ function Invoke-IT113-Menu {
 function Invoke-IT115-Menu {
     Clear-Host
     Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
-    Read-Host "`nNhấn Enter để quay lại Menu chính..."
+    Read-Host "`nNhan Enter de quay lai Menu chinh..."
     return
 }
 
@@ -251,7 +247,7 @@ function Invoke-IT115-Menu {
 # =====================================================
 function Show-Menu-IT {
     Clear-Host
-    # Mảng lưu thông tin xuất file HTML
+    # Khởi tạo mảng lưu thông tin xuất file HTML sạch
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
@@ -381,11 +377,11 @@ function Show-Menu-IT {
     if (!$version) { $version = $RegOS.ReleaseId }
     Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
     
-    # DÒNG CUỐI CÙNG CHO FILE HTML
+    # DÒNG CUỐI CÙNG ĐƯỢC PHÉP CHÈN VÀO FILE HTML
     Show-Line "Current User" $currentUser
     
     # =====================================================
-    # ĐÓNG GÓI XUẤT FILE HTML (TẮT TỰ ĐỘNG WRAP TEXT)
+    # ĐÓNG GÓI XUẤT FILE HTML (TỐI ƯU: TẮT TỰ ĐỘNG WRAP TEXT)
     # =====================================================
     $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber.Trim() } else { "UnknownSerial" }
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
@@ -399,6 +395,7 @@ function Show-Menu-IT {
     <title>System Report - $CleanModel</title>
     <style>
         body { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 20px; font-size: 14px; line-height: 1.4; }
+        /* THAY ĐỔI TẠI ĐÂY: white-space: pre để khoá cuộn ngang, bỏ hoàn toàn wrap text */
         pre { margin: 0; white-space: pre; }
         .gray { color: #555555; font-weight: bold; }
         .white { color: #ffffff; font-weight: bold; }
@@ -424,9 +421,9 @@ function Show-Menu-IT {
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
         [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
-        Write-Host "[LOCAL] OK -> Đã cập nhật báo cáo CÓ MÀU SẮC tại local $LocalReportsFolder" -ForegroundColor Green
+        Write-Host "[LOCAL] OK -> Da cap nhat bao cao CO MAU SAC tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
-        Write-Host "[LOCAL] ERROR -> Không thể ghi file báo cáo vào ổ C!" -ForegroundColor Red
+        Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
     
     # Đẩy lên Server LAN
@@ -439,16 +436,16 @@ function Show-Menu-IT {
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
-            Write-Host "[ONLINE] OK -> Đã cập nhật báo cáo màu lên Server ($ServerHost)" -ForegroundColor Cyan
+            Write-Host "[ONLINE] OK -> Da cap nhat bao cao mau len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] OK -> Nhưng folder mạng LAN đang chặn quyền ghi báo cáo!" -ForegroundColor Red
+            Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Không thấy Server mạng '$ServerHost', hoàn tất chạy phần mềm." -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', hoan tat chay phan mem." -ForegroundColor DarkGray
     }
 
     # =====================================================
-    # PHẦN ĐƯỜNG DẪN DƯỚI MENU (CHỈ IN TRÊN CONSOLE)
+    # PHẦN ĐƯỜNG DẪN DƯỚI MENU (CHỈ IN TRÊN CONSOLE - HTML KHÔNG LẤY)
     # =====================================================
     Write-Host $BorderLine -ForegroundColor DarkGray
     Write-Host ("{0,-$global:LabelWidth} >>> " -f "SOFTWARE Path") -NoNewline -ForegroundColor Green
@@ -458,7 +455,7 @@ function Show-Menu-IT {
     Write-Host $SourceSW2 -ForegroundColor Yellow
     Write-Host $BorderLine -ForegroundColor DarkGray
 
-    Write-Host "User vui lòng nhập số 115 để được hỗ trợ: " -NoNewline
+    Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
     $topMenu = Read-Host
     switch ($topMenu) {
         "111" { return }           
