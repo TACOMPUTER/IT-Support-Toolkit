@@ -6,8 +6,11 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
-# Thống nhất URL chính thức của script trên GitHub để tự động nâng quyền Admin từ RAM
+# Thống nhất URL chính thức của script trên GitHub để tải và chạy từ RAM/Local
 $ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
+$SystemDriveSW = "C:\SW"
+$LocalScriptPath = Join-Path $SystemDriveSW "IT_Github.ps1"
+$DestExePath = Join-Path $SystemDriveSW "IT_Github.exe"
 
 # ===== INIT WINAPI =====
 if (-not ("WinAPI" -as [type])) {
@@ -30,15 +33,19 @@ $consoleHandle = [WinAPI]::GetConsoleWindow()
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $SkipAdminCheck -and -not $IsAdmin) {
-    Write-Host "⚠️ Dang nang quyen Administrator qua RAM..." -ForegroundColor Yellow
-    # Nâng quyền bằng cách gọi lại chính URL để nạp trực tiếp vào RAM tiến trình mới
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-RestMethod -Uri '$ScriptWebUrl' | Invoke-Expression`"" -Verb RunAs
+    Write-Host "⚠️ Dang nang quyen Administrator..." -ForegroundColor Yellow
+    # Nếu chạy local thì gọi file local, nếu chạy Web thì gọi URL Web
+    if (Test-Path $LocalScriptPath) {
+        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`"" -Verb RunAs
+    } else {
+        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-RestMethod -Uri '$ScriptWebUrl' | Invoke-Expression`"" -Verb RunAs
+    }
     exit
 }
 
-# Thay đổi Window Title linh hoạt (RAM Mode)
+# Thay đổi Window Title linh hoạt
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
-$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Powered by RAM"
+$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Hybrid RAM & Local"
 
 # Resize Console 
 try {
@@ -84,12 +91,11 @@ $heightPx = $rect.Bottom - $rect.Top
 
 
 # =====================================================
-# KHU VỰC ĐỊNH NGHĨA BIẾN HỆ THỐNG TRÊN RAM
+# KHU VỰC QUÉT Ổ ĐĨA & THIẾT LẬP ĐƯỜNG DẪN 
 # =====================================================
 $TargetFolder = "OneDrive\TACOMPUTER\Software"
 $SourceSW = "C:\SW" # Mặc định
 
-# Quét tìm đường dẫn Software thực tế trên các ổ đĩa của máy
 $AllDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.Name -ne "C:\" }
 foreach ($d in $AllDrives) {
     $CheckPath = Join-Path $d.Name $TargetFolder
@@ -103,7 +109,6 @@ if ($SourceSW -eq "C:\SW") {
     if (Test-Path $CheckC) { $SourceSW = $CheckC }
 }
 
-# Tính toán đường dẫn SOFTWARE2
 if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
     $drive = [System.IO.Path]::GetPathRoot($SourceSW)
     $SourceSW2 = Join-Path $drive "Software2"
@@ -111,15 +116,51 @@ if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
     $SourceSW2 = $SourceSW + "2"
 }
 $currentUser = "$env:COMPUTERNAME\$env:USERNAME"
+$ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 
 
 # =====================================================
-# KHU VỰC ĐỊNH NGHĨA CÁC HÀM TIẾN TRÌNH CON (FUNCTIONS)
+# TỰ ĐỘNG ĐỒNG BỘ FILE XUỐNG C:\SW VÀ TẠO SHORTCUT
+# =====================================================
+if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
+
+# 1. Ghi đè file IT_Github.ps1 tại Local
+try {
+    $WebCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
+    if ($WebCode) {
+        [System.IO.File]::WriteAllText($LocalScriptPath, $WebCode)
+    }
+} catch {}
+
+# 2. Sao chép file IT_Github.exe từ Source đĩa vào C:\SW
+if (Test-Path $ExeSourcePath) {
+    Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
+    Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
+}
+
+# 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe
+try {
+    $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
+    $StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
+    
+    $WshShell = New-Object -ComObject WScript.Shell
+    if (Test-Path $StartMenuProgramslnk) { Remove-Item $StartMenuProgramslnk -Force }
+    
+    $ShortcutStartMenu = $WshShell.CreateShortcut($StartMenuProgramslnk)
+    $ShortcutStartMenu.TargetPath = $DestExePath
+    $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
+    $ShortcutStartMenu.Save()
+} catch {
+    Write-Host "[WARNING] Khong the tao shortcut Start Menu!" -ForegroundColor Yellow
+}
+
+
+# =====================================================
+# KHU VỰC CÁC HÀM TIẾN TRÌNH CON (CORE CHẠY TRÊN RAM)
 # =====================================================
 
-# --- ĐÂY LÀ KHỐI LỆNH CỦA FILE IT-113.PS1 CŨ ---
 function Invoke-IT113-Menu {
-    # Tự động nạp cấu hình Loại trừ Defender trước khi vẽ menu
+    # Tự động cấu hình Loại trừ Defender
     $requiredPaths = @("\\IT\Software", "\\IT\Software2", "\\IT-E580\Software", "\\IT-E580\Software2", "C:\SW")
     $validDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -in 2,3 }
     $existingPaths = @()
@@ -161,33 +202,31 @@ function Invoke-IT113-Menu {
             '1' { 
                 Clear-Host
                 Write-Host "🚀 Dang chay: Windows Deployment hoàn toàn trên RAM..." -ForegroundColor Green
-                # [Chèn code thực thi cụ thể của nút 1 tại đây]
+                # [Chèn code thực thi của nút 1 tại đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '2' { 
                 Clear-Host
                 Write-Host "🚀 Dang chay: Fix Network & Update Firmware..." -ForegroundColor Green
-                # [Chèn code thực thi cụ thể của nút 2 tại đây]
+                # [Chèn code thực thi của nút 2 tại đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '3' { 
                 Clear-Host
                 Write-Host "🚀 Dang chay: Tien ich SW2..." -ForegroundColor Green
-                # [Chèn code thực thi cụ thể của nút 3 tại đây]
+                # [Chèn code thực thi của nút 3 tại đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
-            '111' { return } # Thoát hàm 113 để về luồng xử lý của Menu tổng
+            '111' { return } 
             default { Write-Host "Lua chon khong hop le!"; Start-Sleep -Seconds 1 }
         }
     }
 }
 
-# --- ĐÂY LÀ KHỐI LỆNH CỦA FILE IT-115.PS1 CŨ ---
 function Invoke-IT115-Menu {
     Clear-Host
     Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
-    # [Anh có thể chèn toàn bộ nội dung hiển thị hoặc tác vụ của IT-115 vào đây]
-    
+    # [Chèn tác vụ của IT-115 vào đây]
     Read-Host "`nNhan Enter de quay lai Menu chinh..."
     return
 }
@@ -316,7 +355,7 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Đẩy báo cáo HTML thẳng lên mạng LAN Server (Không lưu Local .html)
+    # Báo cáo HTML đẩy lên Server LAN
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
@@ -348,14 +387,14 @@ function Show-Menu-IT {
     Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
     $topMenu = Read-Host
     switch ($topMenu) {
-        "111" { return }           # Nạp lại chính vòng lặp Menu chính
-        "113" { Invoke-IT113-Menu } # Gọi thẳng Hàm của Tool 113 trên RAM
-        "115" { Invoke-IT115-Menu } # Gọi thẳng Hàm của Tool 115 trên RAM
-        default { exit }            # Thoát tiến trình
+        "111" { return }           
+        "113" { Invoke-IT113-Menu } 
+        "115" { Invoke-IT115-Menu } 
+        default { exit }            
     }
 }
 
-# Vòng lặp duy trì giao diện liên tục trong bộ nhớ RAM
+# Vòng lặp chính duy trì giao diện liên tục
 while ($true) { 
     Show-Menu-IT 
 }
