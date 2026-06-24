@@ -424,7 +424,6 @@ function Show-Menu-IT {
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
         [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
-        Write-Host "[LOCAL] OK -> Đã cập nhật báo cáo CÓ MÀU SẮC tại local $LocalReportsFolder" -ForegroundColor Green
     } catch {
         Write-Host "[LOCAL] ERROR -> Không thể ghi file báo cáo vào ổ C!" -ForegroundColor Red
     }
@@ -439,7 +438,6 @@ function Show-Menu-IT {
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
-            Write-Host "[ONLINE] OK -> Đã cập nhật báo cáo màu lên Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
             Write-Host "[ONLINE] OK -> Nhưng folder mạng LAN đang chặn quyền ghi báo cáo!" -ForegroundColor Red
         }
