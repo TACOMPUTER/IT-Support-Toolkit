@@ -1,3 +1,210 @@
+param(
+    [int]$PSWidth = 80,
+    [int]$PSHeight = 55,
+    [int]$PosX = 0,
+    [int]$PosY = 0,
+    [bool]$SkipAdminCheck = $false
+)
+
+# ===== INIT WINAPI =====
+if (-not ("WinAPI" -as [type])) {
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public class WinAPI {
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetConsoleWindow();
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+"@
+}
+
+$consoleHandle = [WinAPI]::GetConsoleWindow()
+
+# Xác định Script Path
+$callStack = Get-PSCallStack
+if ($callStack.Count -gt 1 -and $callStack[1].ScriptName) {
+    $MainScript = $callStack[-1].ScriptName
+} else {
+    $MainScript = if ($PSCommandPath) { $PSCommandPath } else { $MyInvocation.MyCommand.Path }
+}
+
+if (-not $MainScript) { $MainScript = "C:\SW\cmd-Powershell\IT_Github.ps1" } 
+$CurrentScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MainScript -Parent }
+
+# Check Admin
+$IsAdmin = ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $SkipAdminCheck -and -not $IsAdmin) {
+    Write-Host "⚠️ Dang nang quyen Administrator..." -ForegroundColor Yellow
+    Start-Process powershell `
+        -ArgumentList "-ExecutionPolicy Bypass -File `"$MainScript`"" `
+        -Verb RunAs
+    exit
+}
+
+# Chỉ cho 1 script chạy
+$currentPID = $PID
+$scriptName = [System.IO.Path]::GetFileName($MainScript)
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
+    $_.ProcessId -ne $currentPID -and
+    $_.CommandLine -match [regex]::Escape($scriptName)
+} | ForEach-Object {
+    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
+}
+
+# Set Title
+$fileName = Split-Path $MainScript -Leaf
+$folderPath = Split-Path $MainScript -Parent
+$adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
+$host.UI.RawUI.WindowTitle = "Running $fileName $adminText"
+
+# Resize Console (Có bọc chống lỗi Handle khi chạy trực tiếp từ Web URL)
+try {
+    $maxWidth  = $host.UI.RawUI.MaxWindowSize.Width
+    $maxHeight = $host.UI.RawUI.MaxWindowSize.Height
+    $PSWidth  = [Math]::Min($PSWidth,  $maxWidth)
+    $PSHeight = [Math]::Min($PSHeight, $maxHeight)
+    
+    [Console]::BufferWidth  = [Math]::Max($PSWidth,  [Console]::BufferWidth)
+    [Console]::BufferHeight = [Math]::Max($PSHeight, [Console]::BufferHeight)
+    [Console]::WindowWidth  = $PSWidth
+    [Console]::WindowHeight = $PSHeight
+} catch {
+    # Nếu không lấy được console handle khi chạy qua IE/URL, sử dụng Host UI thay thế
+    try {
+        $size = $host.UI.RawUI.WindowSize
+        $size.Width = $PSWidth
+        $size.Height = $PSHeight
+        $host.UI.RawUI.WindowSize = $size
+    } catch {}
+}
+
+# Move Window
+if (-not ("WinMove" -as [type])) {
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public class WinMove {
+    [DllImport("user32.dll")]
+    public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int W, int H, bool repaint);
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+    public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+}
+"@
+}
+$handle = (Get-Process -Id $PID).MainWindowHandle
+$rect = New-Object WinMove+RECT
+[WinMove]::GetWindowRect($handle, [ref]$rect)
+$widthPx  = $rect.Right - $rect.Left
+$heightPx = $rect.Bottom - $rect.Top
+[WinMove]::MoveWindow($handle, $PosX, $PosY, $widthPx, $heightPx, $true) | Out-Null
+
+# Set Font size
+$psKey = "HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell.exe"
+$DesiredFontSize = 0x000E0000
+if (-not (Test-Path $psKey)) { New-Item -Path $psKey -Force | Out-Null }
+$CurrentFontSize = (Get-ItemProperty -Path $psKey -Name FontSize -ErrorAction SilentlyContinue).FontSize
+
+if ($CurrentFontSize -ne $DesiredFontSize) {
+    try {
+        New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Console\TrueTypeFont" `
+          -Name "000" -Value "Consolas" -PropertyType String -Force -ErrorAction SilentlyContinue | Out-Null
+        Set-ItemProperty -Path $psKey -Name FaceName -Value "Consolas"
+        Set-ItemProperty -Path $psKey -Name FontSize -Value $DesiredFontSize
+        Write-Host "⚠️ Dang cap nhat Font Size moi, khoi dong lai..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$MainScript`""
+        exit
+    } catch { }
+}
+
+# Khai báo biến
+$ITScriptRoot = $CurrentScriptRoot
+$LibScript   = Join-Path $ITScriptRoot "IT\Library"
+$IT113Script = Join-Path $ITScriptRoot "IT\IT-113"
+$IT115Script = Join-Path $ITScriptRoot "IT\IT-115"
+# Tự động quét tìm đường dẫn Software thực tế trên các ổ đĩa của máy
+$TargetFolder = "OneDrive\TACOMPUTER\Software"
+$SourceSW = "C:\SW" # Giá trị mặc định nếu không tìm thấy ổ nào khác
+
+# Quét qua tất cả các ổ đĩa đang sẵn sàng (Fixed, Removable...) trừ ổ C ra cho nhanh
+$AllDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.Name -ne "C:\" }
+foreach ($d in $AllDrives) {
+    $CheckPath = Join-Path $d.Name $TargetFolder
+    if (Test-Path $CheckPath) {
+        $SourceSW = $CheckPath
+        break
+    }
+}
+
+# Nếu quét các ổ khác không thấy, thử tìm ngay trên ổ C
+if ($SourceSW -eq "C:\SW") {
+    $CheckC = Join-Path "C:\" $TargetFolder
+    if (Test-Path $CheckC) { $SourceSW = $CheckC }
+}
+
+# Tính toán đường dẫn SOFTWARE2 dựa trên SOFTWARE vừa tìm được
+if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
+    $drive = [System.IO.Path]::GetPathRoot($SourceSW)
+    $SourceSW2 = Join-Path $drive "Software2"
+} else {
+    $SourceSW2 = $SourceSW + "2"
+}
+
+$SystemDriveSW         = "C:\SW"
+$ExePath               = Join-Path $ITScriptRoot "IT_Github.exe"
+$SystemDriveSWlnk      = "$SystemDriveSW\IT_Github.exe.lnk"
+$currentUser           = "$env:COMPUTERNAME\$env:USERNAME"
+$StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
+$StartMenuShortPath    = $StartMenuProgramsPath.Substring($StartMenuProgramsPath.IndexOf("\Start Menu"))
+$StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
+$ExpandedStartMenuPath = [Environment]::ExpandEnvironmentVariables($StartMenuProgramsPath)
+$ExpandedStartMenuLnk  = [Environment]::ExpandEnvironmentVariables($StartMenuProgramslnk)
+$exportvariablePath    = "$SystemDriveSW\variable_IT.ps1"
+
+# Xuất biến
+if (Test-Path $exportvariablePath) { Remove-Item $exportvariablePath -Force }
+function Is-PathLike($str) {
+    return ($str -is [string]) -and ($str -match '^[a-zA-Z]:\\' -or $str -match '^\\\\' -or $str -match '\\.+\\' -or $str -match '\\$')
+}
+$excludedNames = @('HOME', 'PSHOME', 'PROFILE', 'PID', 'ExecutionContext', 'Host', 'ShellId','env', 'args', 'Error', 'MyInvocation', 'PSBoundParameters', 'PSCommandPath','PSCulture', 'PSEdition', 'PSScriptRoot', 'PSUICulture', 'PSVersionTable','input', 'output', 'null')
+$vars = Get-Variable | Where-Object { ($_.Value -is [string]) -and (Is-PathLike $_.Value) -and (-not ($excludedNames -contains $_.Name)) -and ($_.Options -notmatch 'ReadOnly|Constant|AllScope') }
+$lines = @()
+foreach ($var in $vars) {
+    $name = $var.Name
+    $value = '"' + $var.Value.Replace('"', '`"') + '"'
+    $lines += "`$$name = $value"
+}
+if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
+$lines | Set-Content $exportvariablePath
+
+# Tạo Shortcut
+$WshShell = New-Object -ComObject WScript.Shell
+$ShortcutSystemDrive = $WshShell.CreateShortcut($SystemDriveSWlnk)
+$ShortcutSystemDrive.TargetPath = $ExePath
+$ShortcutSystemDrive.WorkingDirectory = $ITScriptRoot
+$ShortcutSystemDrive.Save()
+
+if (Test-Path $ExpandedStartMenuLnk) { Remove-Item $ExpandedStartMenuLnk -Force }
+$ShortcutStartMenu = $WshShell.CreateShortcut($ExpandedStartMenuLnk)
+$ShortcutStartMenu.TargetPath = $ExePath
+$ShortcutStartMenu.WorkingDirectory = $ITScriptRoot
+$ShortcutStartMenu.Save()
+
+function Run-IT-xxx {
+    param([string]$ScriptPath)
+    [WinAPI]::ShowWindow($consoleHandle, 6)
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Wait
+    [WinAPI]::ShowWindow($consoleHandle, 9)
+}
+
 function Show-Menu-IT {
     Clear-Host
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
@@ -178,3 +385,18 @@ function Show-Menu-IT {
         default { return }
     }
 }
+
+function GoTo-IT-111 {
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$MainScript`""
+    exit
+}
+function GoTo-IT-115 {
+    Run-IT-xxx "$IT115Script\IT-115.ps1"
+    return
+}
+function GoTo-IT-113 {
+    Run-IT-xxx "$IT113Script\IT-113.ps1"
+    return
+}
+
+while ($true) { Show-Menu-IT }
