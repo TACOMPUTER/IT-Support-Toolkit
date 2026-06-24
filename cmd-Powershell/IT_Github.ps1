@@ -265,25 +265,35 @@ function Show-Menu-IT {
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
         Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
-        $script:ReportLines.Add("[ Laptop Information ]")
+        $script:ReportLines.Add("<span class='cyan'>[ Laptop Information ]</span>")
     } else {
         Write-Host "[ PC Information ]" -ForegroundColor Cyan
-        $script:ReportLines.Add("[ PC Information ]")
+        $script:ReportLines.Add("<span class='cyan'>[ PC Information ]</span>")
     }
 
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
+    # Hàm in và gán màu cho HTML dòng chính
     function Show-Line {
         param($label, $value)
-        $script:ReportLines.Add(("{0,-$global:LabelWidth} >>> {1}" -f $label, $value))
+        if ($value) {
+            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span><span class='yellow'>{1}</span>" -f $label, $value)
+        } else {
+            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span>" -f $label)
+        }
         Write-Host ("{0,-$global:LabelWidth} >>> " -f $label) -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
+    # Hàm in và gán màu cho HTML dòng phụ (Sub)
     function Show-SubLine {
         param($label, $value)
-        $script:ReportLines.Add(("  {0,-$global:SubLabelWidth} : {1}" -f $label, $value))
+        if ($label) {
+            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f $label, $value)
+        } else {
+            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f "", $value)
+        }
         Write-Host ("  {0,-$global:SubLabelWidth} : " -f $label) -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
@@ -303,6 +313,7 @@ function Show-Menu-IT {
     Show-Line "Serial" $BIOS.SerialNumber
     Show-Line "BIOS ver" $BIOS.SMBIOSBIOSVersion
     Write-Host ""
+    $script:ReportLines.Add("") # Dòng trống trong HTML
 
     if ($CPU.Count -gt 1) {
         Show-Line "CPU" ""
@@ -343,6 +354,7 @@ function Show-Menu-IT {
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
     foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
     Write-Host ""
+    $script:ReportLines.Add("")
     
     # MAC Info
     Show-Line "MAC Address" ""
@@ -353,11 +365,12 @@ function Show-Menu-IT {
         elseif ($adapter.Name -match "Bluetooth") { $Type = "Bluetooth" }
         
         $LabelName = "$Type - $($adapter.Name)"
-        $script:ReportLines.Add(("  $LabelName"))
+        $script:ReportLines.Add("<span class='blue'>  $LabelName</span>")
         Write-Host "  $LabelName" -ForegroundColor Blue
         Show-SubLine "" $adapter.MACAddress
     }
     Write-Host ""
+    $script:ReportLines.Add("")
 
     $version = $RegOS.DisplayVersion
     if (!$version) { $version = $RegOS.ReleaseId }
@@ -365,11 +378,12 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Cấu trúc nội dung file báo cáo HTML kèm CSS style của anh
+    # --- 🚩 EXPORT HTML (TỐI ƯU: LUÔN LUÔN GHI LOCAL + TỰ ĐỘNG ĐẨY SERVER NẾU ONLINE) ---
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
+    
     $HtmlContent = @"
 <!DOCTYPE html>
 <html>
