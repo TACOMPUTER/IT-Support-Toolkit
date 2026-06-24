@@ -52,7 +52,7 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
 $currentPID = $PID
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
     $_.ProcessId -ne $currentPID -and
-    ($_.CommandLine -match "IT_Github.ps1" -or $_.CommandLine -match "Invoke-Expression")
+    ($_.CommandLine -match "IT_Github-call.ps1" -or $_.CommandLine -match "Invoke-Expression")
 } | ForEach-Object {
     try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
