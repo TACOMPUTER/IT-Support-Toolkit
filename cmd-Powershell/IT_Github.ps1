@@ -247,29 +247,25 @@ function Invoke-IT115-Menu {
 # =====================================================
 function Show-Menu-IT {
     Clear-Host
+    # Khởi tạo mảng lưu trữ CHỈ dành riêng cho nội dung cần xuất file HTML
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
     $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
 
-    # Thanh viền trên giao diện
+    # In phần header ra màn hình Console (Không đưa vào file HTML)
     $BorderLine = "+" * $LineWidth
-    $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
     Write-Host $BorderLine -ForegroundColor DarkGray
-    
     $text = " IT support, Scripted by TACOMPUTER & GPT, 0933.848.990 "
     $pad = [Math]::Max(0, $LineWidth - $text.Length)
     $left  = [Math]::Floor($pad / 2)
     $right = $pad - $left
-    
-    $script:ReportLines.Add("<span class='gray'>" + ("+" * $left) + "</span><span class='white'>$text</span><span class='gray'>" + ("+" * $right) + "</span>")
     Write-Host ("+" * $left) -ForegroundColor DarkGray -NoNewline
     Write-Host $text -NoNewline
     Write-Host ("+" * $right) -ForegroundColor DarkGray
-    
-    $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
     Write-Host $BorderLine -ForegroundColor DarkGray
 
+    # BẮT ĐẦU ĐƯA DỮ LIỆU VÀO HTML TỪ ĐÂY
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
         Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
@@ -282,7 +278,7 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Ép kiểu dữ liệu Raw HTML để không bị Encode thành text thường
+    # Hàm in Dòng cấp 1 (Có ghi vào HTML kèm thẻ màu)
     function Show-Line {
         param($label, $value)
         $fmtLabel = "{0,-$global:LabelWidth}" -f $label
@@ -291,6 +287,7 @@ function Show-Menu-IT {
         Write-Host $value -ForegroundColor Yellow
     }
 
+    # Hàm in Dòng cấp 2 (Có ghi vào HTML kèm thẻ màu)
     function Show-SubLine {
         param($label, $value)
         $fmtSubLabel = "  {0,-$global:SubLabelWidth}" -f $label
@@ -379,16 +376,15 @@ function Show-Menu-IT {
     $version = $RegOS.DisplayVersion
     if (!$version) { $version = $RegOS.ReleaseId }
     Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
+    
+    # DÒNG CUỐI CÙNG ĐƯỢC PHÉP LƯU VÀO FILE HTML
     Show-Line "Current User" $currentUser
     
-    $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
-    Write-Host $BorderLine -ForegroundColor DarkGray
-    
-    # --- KHỞI TẠO CẤU TRÚC HTML SỬ DỤNG ĐƯỜNG TRUYỀN NGUYÊN BẢN (RAW-JOIN) ---
+    # =====================================================
+    # KHỞI TẠO VÀ ĐÓNG GÓI HTML NGAY TẠI ĐÂY (CHỈ ĐẾN CURRENT USER)
+    # =====================================================
     $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber.Trim() } else { "UnknownSerial" }
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
-    
-    # Nối mảng chuỗi với xuống dòng chuẩn của HTML pre
     $Content = $script:ReportLines -join "`r`n"
     
     $HtmlTemplate = @"
@@ -416,26 +412,22 @@ function Show-Menu-IT {
 "@
 
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
-    
-    # --- GHI FILE BẰNG UTF8 KHÔNG BOM ĐỂ TRÌNH DUYỆT KHÔNG ĐỌC LỖI THẺ ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
+    
     try {
         if (-not (Test-Path $LocalReportsFolder)) { 
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
-        
-        # Dùng .NET Engine ghi trực tiếp chuỗi gốc để tránh PowerShell can thiệp cấu trúc
         [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
         Write-Host "[LOCAL] OK -> Da cap nhat bao cao CO MAU SAC tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
         Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
     
-    # --- ĐẨY BẢN TRÙNG LẶP LÊN SERVER MẠNG LAN ---
+    # Đẩy lên Server LAN
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
-
     if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
         try {
             if (-not (Test-Path $NetworkFolder)) { 
@@ -451,10 +443,16 @@ function Show-Menu-IT {
         Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', hoan tat chay phan mem." -ForegroundColor DarkGray
     }
 
-    Show-Line "SOFTWARE Path" $SourceSW
-    Show-Line "SOFTWARE2 Path" $SourceSW2
-    
-    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+    # =====================================================
+    # PHẦN THÔNG TIN ĐƯỜNG DẪN DƯỚI MENU (CHỈ IN TRÊN CONSOLE - KHÔNG VÀO FILE)
+    # =====================================================
+    Write-Host $BorderLine -ForegroundColor DarkGray
+    Write-Host ("{0,-$global:LabelWidth} >>> " -f "SOFTWARE Path") -NoNewline -ForegroundColor Green
+    Write-Host $SourceSW -ForegroundColor Yellow
+
+    Write-Host ("{0,-$global:LabelWidth} >>> " -f "SOFTWARE2 Path") -NoNewline -ForegroundColor Green
+    Write-Host $SourceSW2 -ForegroundColor Yellow
+    Write-Host $BorderLine -ForegroundColor DarkGray
 
     Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
     $topMenu = Read-Host
