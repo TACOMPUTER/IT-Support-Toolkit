@@ -185,22 +185,33 @@ foreach ($var in $vars) {
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 $lines | Set-Content $exportvariablePath
 
-# Kiểm tra nếu file EXE gốc tồn tại thì tiến hành copy đè vào C:\SW
+# 1. Định nghĩa đường dẫn file EXE đích nằm trong C:\SW
 $DestExePath = Join-Path $SystemDriveSW "IT_Github.exe"
 
+# 2. Tiến hành kiểm tra và copy file EXE gốc vào C:\SW
 if (Test-Path $ExePath) {
-    # Copy đè file .exe vào C:\SW (-Force để luôn cập nhật bản mới nhất nếu có)
     Copy-Item -Path $ExePath -Destination $DestExePath -Force | Out-Null
     Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
 } else {
-    Write-Host "[WARNING] Khong tim thay file nguon: $ExePath" -ForegroundColor Yellow
+    Write-Host "[WARNING] Khong tim thay file nguon de copy: $ExePath" -ForegroundColor Yellow
 }
 
-if (Test-Path $ExpandedStartMenuLnk) { Remove-Item $ExpandedStartMenuLnk -Force }
-$ShortcutStartMenu = $WshShell.CreateShortcut($ExpandedStartMenuLnk)
-$ShortcutStartMenu.TargetPath = $ExePath
-$ShortcutStartMenu.WorkingDirectory = $ITScriptRoot
-$ShortcutStartMenu.Save()
+# 3. Tạo lại Shortcut trong Start Menu trỏ vào file C:\SW\IT_Github.exe vừa copy
+try {
+    # Khởi tạo lại WshShell chống lỗi không nhận diện đối tượng
+    $WshShell = New-Object -ComObject WScript.Shell
+    
+    # Xóa shortcut cũ nếu có
+    if (Test-Path $ExpandedStartMenuLnk) { Remove-Item $ExpandedStartMenuLnk -Force }
+    
+    # Tạo shortcut mới trỏ thẳng vào ổ C:\SW để chạy ổn định
+    $ShortcutStartMenu = $WshShell.CreateShortcut($ExpandedStartMenuLnk)
+    $ShortcutStartMenu.TargetPath = $DestExePath  # ĐÃ SỬA: Trỏ vào file trong C:\SW thay vì file gốc
+    $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
+    $ShortcutStartMenu.Save()
+} catch {
+    Write-Host "[WARNING] Khong the tao shortcut Start Menu!" -ForegroundColor Yellow
+}
 
 function Run-IT-xxx {
     param([string]$ScriptPath)
