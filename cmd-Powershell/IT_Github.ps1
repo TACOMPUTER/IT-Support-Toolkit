@@ -164,23 +164,14 @@ if (Test-Path $ExeSourcePath) {
 
 $WshShell = New-Object -ComObject WScript.Shell
 
-    # 1. Đảm bảo C:\SW tồn tại
+    # Đảm bảo C:\SW tồn tại
 if (-not (Test-Path $SystemDriveSW)) {
     New-Item -ItemType Directory -Path $SystemDriveSW -Force | Out-Null
 }
 
-    # 2. Tạo Shortcut tại C:\SW (cái này để tiện truy cập nhanh)
-$ShortcutSystemDrivePath = Join-Path $SystemDriveSW "IT_Github.lnk"
-$ShortcutSystemDrive = $WshShell.CreateShortcut($ShortcutSystemDrivePath)
-$ShortcutSystemDrive.TargetPath = $DestExePath
-$ShortcutSystemDrive.WorkingDirectory = $SystemDriveSW
-$ShortcutSystemDrive.Description = "IT Github by TACOMPUTER"
-$ShortcutSystemDrive.IconLocation = $DestExePath
-$ShortcutSystemDrive.Save()
-
     # 3. Định nghĩa đường dẫn Start Menu
 $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
-$ShortcutStartMenuPath = Join-Path $StartMenuProgramsPath "IT_Github.lnk"
+$ShortcutStartMenuPath = Join-Path $StartMenuProgramsPath "IT_Github.exe.lnk"
 
     # 4. Tạo shortcut trong Start Menu
 if (Test-Path $ShortcutStartMenuPath) {
