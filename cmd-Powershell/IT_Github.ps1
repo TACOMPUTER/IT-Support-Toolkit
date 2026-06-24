@@ -478,7 +478,12 @@ function Show-Menu-IT {
     Write-Host "User vui lòng nhập số 115 để được hỗ trợ: " -NoNewline
     $topMenu = Read-Host
     switch ($topMenu) {
-        "111" { return }           
+        "111" { 
+            Write-Host "`n→ Đang reload lại script..." -ForegroundColor Cyan
+            # Lệnh này sẽ chạy lại chính file script hiện tại
+            & $MyInvocation.MyCommand.Path 
+            exit # Thoát tiến trình cũ sau khi đã gọi tiến trình mới
+        }
         "113" { Invoke-IT113-Menu } 
         "115" { Invoke-IT115-Menu } 
         default { exit }            
