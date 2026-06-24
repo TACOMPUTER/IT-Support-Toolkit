@@ -137,7 +137,6 @@ if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType D
 # 1. Lưu/Đồng bộ file IT_Github.ps1 vào C:\SW
 if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
     try {
-        # Nếu đang chạy từ RAM (Web), lấy chính nội dung đang chạy ghi xuống đĩa
         $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
         if (-not $CurrentCode) {
             $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
@@ -216,19 +215,16 @@ function Invoke-IT113-Menu {
             '1' { 
                 Clear-Host
                 Write-Host "🚀 Dang chay: Windows Deployment hoan toan tren RAM..." -ForegroundColor Green
-                # [Nhét code file IT-113-1 cũ của anh vào đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '2' { 
                 Clear-Host
                 Write-Host "🚀 Dang chay: Fix Network & Update Firmware tren RAM..." -ForegroundColor Green
-                # [Nhét code file IT-113-2 cũ của anh vào đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '3' { 
                 Clear-Host
                 Write-Host "🚀 Dang chay: Tien ich SW2 tren RAM..." -ForegroundColor Green
-                # [Nhét code file IT-113-3 cũ của anh vào đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '111' { return } 
@@ -241,7 +237,6 @@ function Invoke-IT113-Menu {
 function Invoke-IT115-Menu {
     Clear-Host
     Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
-    # [Nhét code file IT-115 cũ của anh vào đây]
     Read-Host "`nNhan Enter de quay lai Menu chinh..."
     return
 }
@@ -370,13 +365,27 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Gửi báo cáo HTML trực tiếp lên mạng mạng LAN Server
+    # Cấu trúc nội dung file báo cáo HTML
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
     $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
+    # --- XỬ LÝ LƯU BÁO CÁO LOCAL (LUÔN LUÔN TẠO) ---
+    $LocalFolder = "C:\SW\Reports"
+    try {
+        if (-not (Test-Path $LocalFolder)) { 
+            New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null 
+        }
+        $LocalFile = Join-Path $LocalFolder $FileNameReport
+        [System.IO.File]::WriteAllText($LocalFile, $HtmlContent)
+        Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local C:\SW\Reports" -ForegroundColor Green
+    } catch {
+        Write-Host "[LOCAL] WARNING -> Khong the ghi bao cao xuong o C!" -ForegroundColor Yellow
+    }
+    
+    # --- XỬ LÝ LƯU BÁO CÁO QUA SERVER MẠNG LAN (BẢN TRÙNG LẶP) ---
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
@@ -389,10 +398,10 @@ function Show-Menu-IT {
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] OK -> Folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
+            Write-Host "[ONLINE] OK -> Nhung folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server mạng '$ServerHost'. Bo qua luu bao cao." -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', dung ban bao cao local." -ForegroundColor DarkGray
     }
 
     Show-Line "SOFTWARE Path" $SourceSW
@@ -403,13 +412,13 @@ function Show-Menu-IT {
     $topMenu = Read-Host
     switch ($topMenu) {
         "111" { return }           
-        "113" { Invoke-IT113-Menu } # Gọi thẳng hàm chứa core chạy trên RAM
-        "115" { Invoke-IT115-Menu } # Gọi thẳng hàm chứa core chạy trên RAM
+        "113" { Invoke-IT113-Menu } 
+        "115" { Invoke-IT115-Menu } 
         default { exit }            
     }
 }
 
-# Vòng lặp duy trì
+# Vòng lặp duy trì giao diện
 while ($true) { 
     Show-Menu-IT 
 }
