@@ -14,6 +14,16 @@ $DestExePath     = Join-Path $SystemDriveSW "IT_Github.exe"
 # URL để tự nâng quyền Admin từ RAM nếu chạy lần đầu qua Web
 $ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
 
+# ===== 💥 CƯỠNG BỨC GIẢI PHÓNG RAM - DIỆT TIẾN TRÌNH TREO NGẦM =====
+$currentPID = $PID
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='IT_Github.exe'" | Where-Object {
+    $_.ProcessId -ne $currentPID
+} | ForEach-Object {
+    try { 
+        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue 
+    } catch {}
+}
+
 # ===== INIT WINAPI =====
 if (-not ("WinAPI" -as [type])) {
 Add-Type @"
@@ -42,15 +52,6 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
         Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-RestMethod -Uri '$ScriptWebUrl' | Invoke-Expression`"" -Verb RunAs
     }
     exit
-}
-
-# Chỉ cho 1 script chạy
-$currentPID = $PID
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
-    $_.ProcessId -ne $currentPID -and
-    ($_.CommandLine -match "IT_Github.ps1" -or $_.CommandLine -match "Invoke-Expression")
-} | ForEach-Object {
-    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
 
 # Title giao diện
@@ -241,7 +242,7 @@ function Invoke-IT115-Menu {
 
 
 # =====================================================
-# ⚡️ KHU VỰC THU THẬP PHẦN CỨNG (QUÉT 1 LẦN DUY NHẤT LÚC KHỞI ĐỘNG)
+# ⚡️ THU THẬP PHẦN CỨNG (QUÉT CHUẨN ĐÚNG 1 LẦN)
 # =====================================================
 Write-Host "🔍 Chuan bi thong tin xac thuc phan cung..." -ForegroundColor Cyan
 
@@ -264,7 +265,7 @@ $global:NetAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.M
 function Show-Menu-IT {
     Clear-Host
     
-    # Ép giải phóng bộ nhớ cũ trước khi nạp phiên mới
+    # Giải phóng hoàn toàn các đối tượng cũ ra khỏi RAM
     [GC]::Collect()
     [GC]::WaitForPendingFinalizers()
     
@@ -317,7 +318,7 @@ function Show-Menu-IT {
         Write-Host $value -ForegroundColor Blue
     }
 
-    # Đọc dữ liệu từ biến Static, không gọi lệnh Get-CimInstance lặp lại nữa
+    # Render data tĩnh cực nhẹ từ RAM
     Show-Line "Brand (OEM)" $global:CS.Manufacturer
     Show-Line "Mainboard" $global:BB.Manufacturer
     Show-Line "Product" $global:BB.Product
@@ -465,7 +466,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
     }
 }
 
-# Vòng lặp duy trì giao diện mượt mà không ngốn RAM
+# Vòng lặp chính ổn định
 while ($true) { 
     Show-Menu-IT 
 }
