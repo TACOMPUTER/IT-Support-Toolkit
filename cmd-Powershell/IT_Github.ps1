@@ -58,11 +58,16 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
     try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
 
-# Set Title
+# Set Title (Hiển thị động dạng <<< Github\tên-thư-mục)
 $fileName = Split-Path $MainScript -Leaf
 $folderPath = Split-Path $MainScript -Parent
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
-$host.UI.RawUI.WindowTitle = "Running $fileName $adminText"
+
+# Lấy tên thư mục cuối cùng (Ví dụ: cmd-Powershell)
+$lastFolder = Split-Path $folderPath -Leaf
+
+# Gán vào WindowTitle
+$host.UI.RawUI.WindowTitle = "Running $fileName $adminText <<< Github\$lastFolder"
 
 # Resize Console (Có bọc chống lỗi Handle khi chạy trực tiếp từ Web URL)
 try {
