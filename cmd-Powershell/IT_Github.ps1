@@ -53,9 +53,9 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
     try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
 
-# Title giao diện
+# Title giao diện (Đã cập nhật theo cấu trúc đường dẫn Github anh yêu cầu)
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
-$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Powered by RAM"
+$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Github\cmd-Powershell"
 
 # Resize Console 
 try {
@@ -247,13 +247,13 @@ function Invoke-IT115-Menu {
 # =====================================================
 function Show-Menu-IT {
     Clear-Host
-    # Mảng này CHỈ hứng thông tin từ [ PC Information ] đến Current User
+    # Khởi tạo mảng lưu thông tin xuất file HTML sạch
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
     $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
 
-    # In phần header ra Console (Hoàn toàn KHÔNG ghi vào file HTML)
+    # Header Console (Không ghi vào file HTML)
     $BorderLine = "+" * $LineWidth
     Write-Host $BorderLine -ForegroundColor DarkGray
     $text = " IT support, Scripted by TACOMPUTER & GPT, 0933.848.990 "
@@ -265,7 +265,7 @@ function Show-Menu-IT {
     Write-Host ("+" * $right) -ForegroundColor DarkGray
     Write-Host $BorderLine -ForegroundColor DarkGray
 
-    # BẮT ĐẦU ĐOẠN LẤY DỮ LIỆU CHO HTML
+    # BẮT ĐẦU ĐOẠN LẤY DỮ LIỆU CHO HTML từ [ PC Information ]
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
         Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
@@ -377,11 +377,11 @@ function Show-Menu-IT {
     if (!$version) { $version = $RegOS.ReleaseId }
     Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
     
-    # DÒNG CHUẨN CUỐI CÙNG ĐƯỢC CHẤP NHẬN CHO HTML
+    # DÒNG CUỐI CÙNG ĐƯỢC PHÉP CHÈN VÀO FILE HTML
     Show-Line "Current User" $currentUser
     
     # =====================================================
-    # ĐÓNG GÓI XUẤT FILE HTML NGAY (KHÔNG NHẬN THÊM DATA)
+    # ĐÓNG GÓI XUẤT FILE HTML (TỐI ƯU: TẮT TỰ ĐỘNG WRAP TEXT)
     # =====================================================
     $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber.Trim() } else { "UnknownSerial" }
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
@@ -395,7 +395,8 @@ function Show-Menu-IT {
     <title>System Report - $CleanModel</title>
     <style>
         body { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 20px; font-size: 14px; line-height: 1.4; }
-        pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+        /* THAY ĐỔI TẠI ĐÂY: white-space: pre để khoá cuộn ngang, bỏ hoàn toàn wrap text */
+        pre { margin: 0; white-space: pre; }
         .gray { color: #555555; font-weight: bold; }
         .white { color: #ffffff; font-weight: bold; }
         .cyan { color: #00ffff; font-weight: bold; }
@@ -419,7 +420,6 @@ function Show-Menu-IT {
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
-        # Sử dụng Engine UTF8 gốc để tránh lỗi mã hóa ký tự tag của PowerShell
         [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
         Write-Host "[LOCAL] OK -> Da cap nhat bao cao CO MAU SAC tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
