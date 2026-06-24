@@ -6,7 +6,7 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
-# Thống nhất đường dẫn cục bộ tại C:\SW chỉ dùng cho EXE và Reports
+# Thống nhất đường dẫn cục bộ tại C:\SW
 $SystemDriveSW  = "C:\SW"
 $DestExePath     = Join-Path $SystemDriveSW "IT_Github.exe"
 
@@ -127,10 +127,9 @@ $ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 # =====================================================
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
-# 1. Chỉ sao chép file IT_Github.exe nếu tìm thấy nguồn phân phối LAN/USB
 if (Test-Path $ExeSourcePath) {
     Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
-    Write-Host "[SYSTEM] Da đồng bộ IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
+    Write-Host "[SYSTEM] Da dong bo IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
     
     try {
         $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
@@ -243,7 +242,7 @@ $global:NetAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.M
 function Show-Menu-IT {
     Clear-Host
     
-    # Giải phóng triệt để các biến rác thu gom chuỗi vòng trước
+    # Giải phóng bộ nhớ rác thu gom chuỗi cũ
     [GC]::Collect()
     [GC]::WaitForPendingFinalizers()
     
@@ -273,29 +272,30 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
+    # DÙNG NET PADRIGHT ĐỂ PHÂN TÁCH KHOẢNG CÁCH, KHÔNG DÙNG TOÁN TỬ -F GÂY LỖI INDEX TRÊN RAM
     function Show-Line {
         param($label, $value)
+        $paddedLabel = if ($label) { $label.PadRight($global:LabelWidth) } else { "".PadRight($global:LabelWidth) }
+        
         if ($value) {
-            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span><span class='yellow'>{1}</span>" -f $label, $value)
+            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span><span class='yellow'>" + $value + "</span>")
         } else {
-            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span>" -f $label)
+            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span>")
         }
-        Write-Host ("{0,-$global:LabelWidth} >>> " -f $label) -NoNewline -ForegroundColor Green
+        Write-Host ($paddedLabel + " >>> ") -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
     function Show-SubLine {
         param($label, $value)
-        if ($label) {
-            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f $label, $value)
-        } else {
-            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f "", $value)
-        }
-        Write-Host ("  {0,-$global:SubLabelWidth} : " -f $label) -NoNewline -ForegroundColor Blue
+        $paddedSub = if ($label) { $label.PadRight($global:SubLabelWidth) } else { "".PadRight($global:SubLabelWidth) }
+        
+        $script:ReportLines.Add("<span class='blue'>  " + $paddedSub + " : " + $value + "</span>")
+        Write-Host ("  " + $paddedSub + " : ") -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
 
-    # Đọc dữ liệu tĩnh từ RAM
+    # Render dữ liệu tĩnh từ RAM cực sạch
     Show-Line "Brand (OEM)" $global:CS.Manufacturer
     Show-Line "Mainboard" $global:BB.Manufacturer
     Show-Line "Product" $global:BB.Product
@@ -307,39 +307,42 @@ function Show-Menu-IT {
 
     if ($global:CPU.Count -gt 1) {
         Show-Line "CPU" ""
-        $i = 1; foreach ($c in $global:CPU) { Show-SubLine "CPU $i" $c.Name; $i++ }
+        $i = 1; foreach ($c in $global:CPU) { Show-SubLine ("CPU " + $i) $c.Name; $i++ }
     } else { Show-Line "CPU" $global:CPU.Name }
 
     # RAM Info
     $ramType = if ($global:Arrays.MemoryErrorCorrection -in 5,6) { "ECC" } else { "Non-ECC" }
-    $totalRAM = "{0:N0}" -f (($global:RAM | Measure-Object Capacity -Sum).Sum / 1GB)
-    Show-Line "RAM (Total)" "$totalRAM GB ($ramType)"
+    $totalRAM = [Math]::Round(($global:RAM | Measure-Object Capacity -Sum).Sum / 1GB)
+    Show-Line "RAM (Total)" ($totalRAM.ToString() + " GB (" + $ramType + ")")
     
     $trueUsedSlots = 0
     $i = 1
     foreach ($ram in $global:RAM) {
-        $size = "{0:N0}" -f ($ram.Capacity / 1GB)
-        $slot = if ($ram.DeviceLocator) { $ram.DeviceLocator.Trim() } else { "Slot $i" }
+        $size = [Math]::Round($ram.Capacity / 1GB)
+        $slot = if ($ram.DeviceLocator) { $ram.DeviceLocator.Trim() } else { "Slot " + $i }
         $manufacturer = if ($ram.Manufacturer) { $ram.Manufacturer.Trim() } else { "Unknown" }
         $partNumber = if ($ram.PartNumber) { $ram.PartNumber.Trim() } else { "Unknown" }
         
-        $RamDetails = "$size GB  $($ram.Speed) MHz  |  $manufacturer  |  $partNumber"
+        $RamDetails = $size.ToString() + " GB  " + $ram.Speed + " MHz  |  " + $manufacturer + "  |  " + $partNumber
         Show-SubLine $slot $RamDetails
         $i++; $trueUsedSlots++
     }
     $TotalSlots = if ($global:Arrays) { @($global:Arrays)[0].MemoryDevices } else { 2 }
-    Show-SubLine "Used Slots" "$trueUsedSlots/$TotalSlots"
+    Show-SubLine "Used Slots" ($trueUsedSlots.ToString() + "/" + $TotalSlots.ToString())
 
     # Disk Info
-    $totalDisk = "{0:N0}" -f (($global:Disks | Measure-Object Size -Sum).Sum / 1GB)
-    Show-Line "Storage (Total)" "$totalDisk GB"
-    $i = 1; foreach ($disk in $global:Disks) { Show-SubLine "Disk $i" ("{0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
+    $totalDisk = [Math]::Round(($global:Disks | Measure-Object Size -Sum).Sum / 1GB)
+    Show-Line "Storage (Total)" ($totalDisk.ToString() + " GB")
+    $i = 1; foreach ($disk in $global:Disks) { 
+        $diskSize = [Math]::Round($disk.Size / 1GB)
+        Show-SubLine ("Disk " + $i) ($disk.Model + " | " + $diskSize.ToString() + " GB"); $i++ 
+    }
 
     # GPU Info
     $vgaCount = 0; $gpuCount = 0
     foreach ($g in $global:GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
-    Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
-    foreach ($g in $global:GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
+    Show-Line "Graphics" ($vgaCount.ToString() + " VGA / " + $gpuCount.ToString() + " GPU")
+    foreach ($g in $global:GPU) { Show-SubLine "GPU_Info" $g.Name }
     Write-Host ""
     $script:ReportLines.Add("")
     
@@ -350,9 +353,9 @@ function Show-Menu-IT {
         if ($adapter.Name -match "Wireless|Wi-Fi|802.11") { $Type = "Wi-Fi" }
         elseif ($adapter.Name -match "Bluetooth") { $Type = "Bluetooth" }
         
-        $LabelName = "$Type - $($adapter.Name)"
-        $script:ReportLines.Add("<span class='blue'>  $LabelName</span>")
-        Write-Host "  $LabelName" -ForegroundColor Blue
+        $LabelName = $Type + " - " + $adapter.Name
+        $script:ReportLines.Add("<span class='blue'>  " + $LabelName + "</span>")
+        Write-Host ("  " + $LabelName) -ForegroundColor Blue
         Show-SubLine "" $adapter.MACAddress
     }
     Write-Host ""
@@ -360,17 +363,16 @@ function Show-Menu-IT {
 
     $version = $global:RegOS.DisplayVersion
     if (!$version) { $version = $global:RegOS.ReleaseId }
-    Show-Line "Windows" "$($global:RegOS.ProductName) | $version | $($global:RegOS.CurrentBuild)"
+    Show-Line "Windows" ($global:RegOS.ProductName + " | " + $version + " | " + $global:RegOS.CurrentBuild)
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # --- 🚩 XUẤT HTML BẰNG PHƯƠNG THỨC REPLACE (TUYỆT ĐỐI KHÔNG DÙNG -F) ---
+    # --- 🚩 EXPORT HTML QUÁ TRÌNH REPLACE AN TOÀN TUYỆT ĐỐI ---
     $Serial = $global:BIOS.SerialNumber
     $CleanModel = ($global:CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
-    $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
+    $FileNameReport = $CleanModel + "_" + $Serial + ".html"
     
-    # Đóng băng template HTML bằng chuỗi Raw Script
     $HtmlTemplate = @'
 <!DOCTYPE html>
 <html>
@@ -389,7 +391,6 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 <body><pre></pre></body>
 </html>
 '@
-    # Dùng phương thức Replace chính thống của hệ thống để nhét dữ liệu
     $HtmlContent = $HtmlTemplate.Replace("", $Serial).Replace("", $Content)
     
     # --- GHI BÁO CÁO LOCAL ---
@@ -427,7 +428,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
     }
 }
 
-# Vòng lặp chính luôn giữ trạng thái sạch
+# Vòng lặp chính ổn định tuyệt đối
 while ($true) { 
     Show-Menu-IT 
 }
