@@ -161,34 +161,29 @@ if (Test-Path $ExeSourcePath) {
 }
 
 # =====================================================
-# TẠO SHORTCUT START MENU (BỔ SUNG)
+# TẠO SHORTCUT START MENU (BẢN TỐI ƯU)
 # =====================================================
 try {
-    # Đường dẫn thư mục Start Menu Programs
-    $ProgramsPath = [System.IO.Path]::Combine([Environment]::GetFolderPath("Programs"), "IT_Github.lnk")
-    
-    # Chỉ tạo nếu file .exe đã có sẵn trong C:\SW
+    $ShortcutName = "IT_Github.lnk"
+    $ProgramsPath = [System.IO.Path]::Combine([Environment]::GetFolderPath("Programs"), $ShortcutName)
+
     if (Test-Path $DestExePath) {
         $WshShell = New-Object -ComObject WScript.Shell
         
-        # Xóa shortcut cũ nếu có để cập nhật
         if (Test-Path $ProgramsPath) { Remove-Item $ProgramsPath -Force }
         
         $Shortcut = $WshShell.CreateShortcut($ProgramsPath)
         $Shortcut.TargetPath = $DestExePath
         $Shortcut.WorkingDirectory = $SystemDriveSW
         $Shortcut.Description = "IT Github by TACOMPUTER"
-        $Shortcut.IconLocation = $DestExePath # Dùng icon của file exe
+        $Shortcut.IconLocation = $DestExePath
         $Shortcut.Save()
         
-        # Ép Windows làm mới giao diện Start Menu để thấy Shortcut ngay lập tức
-        $Shell = New-Object -ComObject Shell.Application
-        $Shell.NameSpace((Split-Path $ProgramsPath)).ParseName((Split-Path $ProgramsPath -Leaf)).InvokeVerb("Properties") | Out-Null
-        
-        Write-Host "[SYSTEM] Đã tạo Shortcut tại Start Menu thành công!" -ForegroundColor Green
+        Write-Host "[SYSTEM] Đã tạo Shortcut thành công!" -ForegroundColor Green
+        Write-Host "Lưu ý: Nếu chưa thấy trong Start Menu, hãy nhấn Ctrl+Shift+Esc -> Restart Windows Explorer." -ForegroundColor Gray
     }
 } catch {
-    Write-Host "[WARNING] Không thể tạo shortcut: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "[WARNING] Lỗi tạo shortcut: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
 # =====================================================
