@@ -6,6 +6,9 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
+# Thống nhất URL chính thức của script trên GitHub để tự động nâng quyền Admin từ RAM
+$ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
+
 # ===== INIT WINAPI =====
 if (-not ("WinAPI" -as [type])) {
 Add-Type @"
@@ -21,55 +24,23 @@ public class WinAPI {
 }
 "@
 }
-
 $consoleHandle = [WinAPI]::GetConsoleWindow()
 
-# Xác định Script Path
-$callStack = Get-PSCallStack
-if ($callStack.Count -gt 1 -and $callStack[1].ScriptName) {
-    $MainScript = $callStack[-1].ScriptName
-} else {
-    $MainScript = if ($PSCommandPath) { $PSCommandPath } else { $MyInvocation.MyCommand.Path }
-}
-
-if (-not $MainScript) { $MainScript = "C:\SW\cmd-Powershell\IT_Github.ps1" } 
-$CurrentScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MainScript -Parent }
-
 # Check Admin
-$IsAdmin = ([Security.Principal.WindowsPrincipal] `
-    [Security.Principal.WindowsIdentity]::GetCurrent()
-).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $SkipAdminCheck -and -not $IsAdmin) {
-    Write-Host "⚠️ Dang nang quyen Administrator..." -ForegroundColor Yellow
-    Start-Process powershell `
-        -ArgumentList "-ExecutionPolicy Bypass -File `"$MainScript`"" `
-        -Verb RunAs
+    Write-Host "⚠️ Dang nang quyen Administrator qua RAM..." -ForegroundColor Yellow
+    # Nâng quyền bằng cách gọi lại chính URL để nạp trực tiếp vào RAM tiến trình mới
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-RestMethod -Uri '$ScriptWebUrl' | Invoke-Expression`"" -Verb RunAs
     exit
 }
 
-# Chỉ cho 1 script chạy
-$currentPID = $PID
-$scriptName = [System.IO.Path]::GetFileName($MainScript)
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
-    $_.ProcessId -ne $currentPID -and
-    $_.CommandLine -match [regex]::Escape($scriptName)
-} | ForEach-Object {
-    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
-}
-
-# Set Title (Hiển thị động dạng <<< Github\tên-thư-mục)
-$fileName = Split-Path $MainScript -Leaf
-$folderPath = Split-Path $MainScript -Parent
+# Thay đổi Window Title linh hoạt (RAM Mode)
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
+$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Powered by RAM"
 
-# Lấy tên thư mục cuối cùng (Ví dụ: cmd-Powershell)
-$lastFolder = Split-Path $folderPath -Leaf
-
-# Gán vào WindowTitle
-$host.UI.RawUI.WindowTitle = "Running $fileName $adminText <<< Github\$lastFolder"
-
-# Resize Console (Có bọc chống lỗi Handle khi chạy trực tiếp từ Web URL)
+# Resize Console 
 try {
     $maxWidth  = $host.UI.RawUI.MaxWindowSize.Width
     $maxHeight = $host.UI.RawUI.MaxWindowSize.Height
@@ -81,7 +52,6 @@ try {
     [Console]::WindowWidth  = $PSWidth
     [Console]::WindowHeight = $PSHeight
 } catch {
-    # Nếu không lấy được console handle khi chạy qua IE/URL, sử dụng Host UI thay thế
     try {
         $size = $host.UI.RawUI.WindowSize
         $size.Width = $PSWidth
@@ -112,40 +82,14 @@ $widthPx  = $rect.Right - $rect.Left
 $heightPx = $rect.Bottom - $rect.Top
 [WinMove]::MoveWindow($handle, $PosX, $PosY, $widthPx, $heightPx, $true) | Out-Null
 
-# Set Font size
-$psKey = "HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell.exe"
-$DesiredFontSize = 0x000E0000
-if (-not (Test-Path $psKey)) { New-Item -Path $psKey -Force | Out-Null }
-$CurrentFontSize = (Get-ItemProperty -Path $psKey -Name FontSize -ErrorAction SilentlyContinue).FontSize
-
-if ($CurrentFontSize -ne $DesiredFontSize) {
-    try {
-        New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Console\TrueTypeFont" `
-          -Name "000" -Value "Consolas" -PropertyType String -Force -ErrorAction SilentlyContinue | Out-Null
-        Set-ItemProperty -Path $psKey -Name FaceName -Value "Consolas"
-        Set-ItemProperty -Path $psKey -Name FontSize -Value $DesiredFontSize
-        Write-Host "⚠️ Dang cap nhat Font Size moi, khoi dong lai..." -ForegroundColor Yellow
-        Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$MainScript`""
-        exit
-    } catch { }
-}
 
 # =====================================================
-# KHU VỰC ĐỊNH NGHĨA BIẾN HỆ THỐNG (FIX CHUẨN THEO VỊ TRÍ MỚI)
+# KHU VỰC ĐỊNH NGHĨA BIẾN HỆ THỐNG TRÊN RAM
 # =====================================================
-# $CurrentScriptRoot hiện tại là: ...\IT-Support-Toolkit\cmd-Powershell
-$ITScriptRoot = $CurrentScriptRoot
-
-# Folder 'IT' nằm ngay bên trong 'cmd-Powershell', không cần nhảy về thư mục cha nữa!
-$LibScript   = Join-Path $ITScriptRoot "IT\Library"
-$IT113Script = Join-Path $ITScriptRoot "IT\IT-113"
-$IT115Script = Join-Path $ITScriptRoot "IT\IT-115"
-
-# Tự động quét tìm đường dẫn Software thực tế trên các ổ đĩa của máy
 $TargetFolder = "OneDrive\TACOMPUTER\Software"
-$SourceSW = "C:\SW" # Giá trị mặc định nếu không tìm thấy ổ nào khác
+$SourceSW = "C:\SW" # Mặc định
 
-# Quét qua tất cả các ổ đĩa đang sẵn sàng (Fixed, Removable...) trừ ổ C ra cho nhanh
+# Quét tìm đường dẫn Software thực tế trên các ổ đĩa của máy
 $AllDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.Name -ne "C:\" }
 foreach ($d in $AllDrives) {
     $CheckPath = Join-Path $d.Name $TargetFolder
@@ -154,91 +98,108 @@ foreach ($d in $AllDrives) {
         break
     }
 }
-
-# Nếu quét các ổ khác không thấy, thử tìm ngay trên ổ C
 if ($SourceSW -eq "C:\SW") {
     $CheckC = Join-Path "C:\" $TargetFolder
     if (Test-Path $CheckC) { $SourceSW = $CheckC }
 }
 
-# Tính toán đường dẫn SOFTWARE2 dựa trên SOFTWARE vừa tìm được
+# Tính toán đường dẫn SOFTWARE2
 if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
     $drive = [System.IO.Path]::GetPathRoot($SourceSW)
     $SourceSW2 = Join-Path $drive "Software2"
 } else {
     $SourceSW2 = $SourceSW + "2"
 }
+$currentUser = "$env:COMPUTERNAME\$env:USERNAME"
 
-$SystemDriveSW         = "C:\SW"
-$ExePath               = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
-$SystemDriveSWlnk      = "$SystemDriveSW\IT_Github.exe.lnk"
-$currentUser           = "$env:COMPUTERNAME\$env:USERNAME"
-$StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
-$StartMenuShortPath    = $StartMenuProgramsPath.Substring($StartMenuProgramsPath.IndexOf("\Start Menu"))
-$StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
-$ExpandedStartMenuPath = [Environment]::ExpandEnvironmentVariables($StartMenuProgramsPath)
-$ExpandedStartMenuLnk  = [Environment]::ExpandEnvironmentVariables($StartMenuProgramslnk)
-$exportvariablePath    = "$SystemDriveSW\variable_IT.ps1"
 
-# Xuất biến
-if (Test-Path $exportvariablePath) { Remove-Item $exportvariablePath -Force }
-function Is-PathLike($str) {
-    return ($str -is [string]) -and ($str -match '^[a-zA-Z]:\\' -or $str -match '^\\\\' -or $str -match '\\.+\\' -or $str -match '\\$')
-}
-$excludedNames = @('HOME', 'PSHOME', 'PROFILE', 'PID', 'ExecutionContext', 'Host', 'ShellId','env', 'args', 'Error', 'MyInvocation', 'PSBoundParameters', 'PSCommandPath','PSCulture', 'PSEdition', 'PSScriptRoot', 'PSUICulture', 'PSVersionTable','input', 'output', 'null')
-$vars = Get-Variable | Where-Object { ($_.Value -is [string]) -and (Is-PathLike $_.Value) -and (-not ($excludedNames -contains $_.Name)) -and ($_.Options -notmatch 'ReadOnly|Constant|AllScope') }
-$lines = @()
-foreach ($var in $vars) {
-    $name = $var.Name
-    $value = '"' + $var.Value.Replace('"', '`"') + '"'
-    $lines += "`$$name = $value"
-}
-if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
-$lines | Set-Content $exportvariablePath
+# =====================================================
+# KHU VỰC ĐỊNH NGHĨA CÁC HÀM TIẾN TRÌNH CON (FUNCTIONS)
+# =====================================================
 
-# 1. Định nghĩa đường dẫn file EXE đích nằm trong C:\SW
-$DestExePath = Join-Path $SystemDriveSW "IT_Github.exe"
-
-# 2. Tiến hành kiểm tra và copy file EXE gốc vào C:\SW
-if (Test-Path $ExePath) {
-    Copy-Item -Path $ExePath -Destination $DestExePath -Force | Out-Null
-    Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
-} else {
-    Write-Host "[WARNING] Khong tim thay file nguon de copy: $ExePath" -ForegroundColor Yellow
-}
-
-# 3. Tạo lại Shortcut trong Start Menu trỏ vào file C:\SW\IT_Github.exe vừa copy
-try {
-    # Khởi tạo đối tượng COM để làm việc với Shortcut
-    $WshShell = New-Object -ComObject WScript.Shell
+# --- ĐÂY LÀ KHỐI LỆNH CỦA FILE IT-113.PS1 CŨ ---
+function Invoke-IT113-Menu {
+    # Tự động nạp cấu hình Loại trừ Defender trước khi vẽ menu
+    $requiredPaths = @("\\IT\Software", "\\IT\Software2", "\\IT-E580\Software", "\\IT-E580\Software2", "C:\SW")
+    $validDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -in 2,3 }
+    $existingPaths = @()
+    foreach ($drive in $validDrives) {
+        $root = $drive.DeviceID
+        if (Test-Path (Join-Path $root "Software")) { $existingPaths += Join-Path $root "Software" }
+        if (Test-Path (Join-Path $root "Software2")) { $existingPaths += Join-Path $root "Software2" }
+        if (Test-Path (Join-Path $root "OneDrive\TACOMPUTER\Software")) { $existingPaths += Join-Path $root "OneDrive\TACOMPUTER\Software" }
+    }
+    $currentRaw = @((Get-MpPreference).ExclusionPath) | Where-Object { $_ }
+    $currentNorm = $currentRaw | ForEach-Object { ($_.TrimEnd('\')).ToLower() }
     
-    # Xóa shortcut cũ nếu tồn tại trước đó
-    if (Test-Path $ExpandedStartMenuLnk) { Remove-Item $ExpandedStartMenuLnk -Force }
-    
-    # Khởi tạo tạo shortcut mới
-    $ShortcutStartMenu = $WshShell.CreateShortcut($ExpandedStartMenuLnk)
-    $ShortcutStartMenu.TargetPath = $DestExePath        # Trỏ chuẩn vào C:\SW\IT_Github.exe
-    
-    # ĐÃ SỬA: Phải giữ thư mục gốc của bộ source để file EXE tìm thấy file .ps1 ngầm
-    $ShortcutStartMenu.WorkingDirectory = $ITScriptRoot 
-    
-    $ShortcutStartMenu.Save()
-} catch {
-    Write-Host "[WARNING] Khong the tao shortcut Start Menu!" -ForegroundColor Yellow
+    foreach ($path in ($requiredPaths + $existingPaths)) {
+        if (($path.TrimEnd('\')).ToLower() -notin $currentNorm) {
+            try { Add-MpPreference -ExclusionPath $path -ErrorAction SilentlyContinue } catch {}
+        }
+    }
+
+    while ($true) {
+        Clear-Host
+        $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
+        $LineWidth = [Math]::Max(40, $ConsoleWidth - 1)
+
+        Write-Host "<<< Current 'Windows Security\Exclusions' list >>>" -ForegroundColor Cyan
+        $preferences = Get-MpPreference
+        $paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
+        $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+        
+        Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+        Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
+        Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
+        Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
+        Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
+        Write-Host "111. Quay lại Menu chính" -ForegroundColor Gray
+        Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+        
+        $choice = Read-Host "Vui long nhap so (1-3 hoac 111)"
+        switch ($choice) {
+            '1' { 
+                Clear-Host
+                Write-Host "🚀 Dang chay: Windows Deployment hoàn toàn trên RAM..." -ForegroundColor Green
+                # [Chèn code thực thi cụ thể của nút 1 tại đây]
+                Read-Host "`nNhan Enter de quay lai Menu IT-113..."
+            }
+            '2' { 
+                Clear-Host
+                Write-Host "🚀 Dang chay: Fix Network & Update Firmware..." -ForegroundColor Green
+                # [Chèn code thực thi cụ thể của nút 2 tại đây]
+                Read-Host "`nNhan Enter de quay lai Menu IT-113..."
+            }
+            '3' { 
+                Clear-Host
+                Write-Host "🚀 Dang chay: Tien ich SW2..." -ForegroundColor Green
+                # [Chèn code thực thi cụ thể của nút 3 tại đây]
+                Read-Host "`nNhan Enter de quay lai Menu IT-113..."
+            }
+            '111' { return } # Thoát hàm 113 để về luồng xử lý của Menu tổng
+            default { Write-Host "Lua chon khong hop le!"; Start-Sleep -Seconds 1 }
+        }
+    }
 }
 
-function Run-IT-xxx {
-    param([string]$ScriptPath)
-    [WinAPI]::ShowWindow($consoleHandle, 6)
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Wait
-    [WinAPI]::ShowWindow($consoleHandle, 9)
+# --- ĐÂY LÀ KHỐI LỆNH CỦA FILE IT-115.PS1 CŨ ---
+function Invoke-IT115-Menu {
+    Clear-Host
+    Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
+    # [Anh có thể chèn toàn bộ nội dung hiển thị hoặc tác vụ của IT-115 vào đây]
+    
+    Read-Host "`nNhan Enter de quay lai Menu chinh..."
+    return
 }
 
+
+# =====================================================
+# GIAO DIỆN MENU CHÍNH (MAIN MENU)
+# =====================================================
 function Show-Menu-IT {
     Clear-Host
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
-    # LOGO IT - Tu dong co gian linh hoat theo chieu rong cua so console
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
     $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
 
@@ -261,7 +222,6 @@ function Show-Menu-IT {
         $script:ReportLines.Add("[ PC Information ]")
     }
 
-    # Định nghĩa độ rộng để căn chỉnh thẳng hàng dấu >>> và dấu : của SubLine
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
@@ -300,7 +260,7 @@ function Show-Menu-IT {
         $i = 1; foreach ($c in $CPU) { Show-SubLine "CPU $i" $c.Name; $i++ }
     } else { Show-Line "CPU" $CPU.Name }
 
-    # --- PHẦN RAM (ĐÃ FIX KHOẢNG CÁCH ĐỀU) ---
+    # RAM
     $RAM = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
     $arrays = Get-CimInstance Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue
     $ramType = if ($arrays.MemoryErrorCorrection -in 5,6) { "ECC" } else { "Non-ECC" }
@@ -315,7 +275,6 @@ function Show-Menu-IT {
         $manufacturer = if ($ram.Manufacturer) { $ram.Manufacturer.Trim() } else { "Unknown" }
         $partNumber = if ($ram.PartNumber) { $ram.PartNumber.Trim() } else { "Unknown" }
         
-        # Định dạng gọn gàng từng cột bằng dấu | cách đều
         $RamDetails = "$size GB  $($ram.Speed) MHz  |  $manufacturer  |  $partNumber"
         Show-SubLine $slot $RamDetails
         $i++; $trueUsedSlots++
@@ -323,20 +282,20 @@ function Show-Menu-IT {
     $TotalSlots = if ($arrays) { @($arrays)[0].MemoryDevices } else { 2 }
     Show-SubLine "Used Slots" "$trueUsedSlots/$TotalSlots"
 
-    # --- PHẦN Ổ CỨNG ---
+    # Disk
     $disks = Get-CimInstance Win32_DiskDrive
     $totalDisk = "{0:N0}" -f (($disks | Measure-Object Size -Sum).Sum / 1GB)
     Show-Line "Storage (Total)" "$totalDisk GB"
     $i = 1; foreach ($disk in $disks) { Show-SubLine "Disk $i" ("{0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
 
-    # --- PHẦN ĐỒ HỌA ---
+    # Graphics
     $vgaCount = 0; $gpuCount = 0
     foreach ($g in $GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
     foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
     Write-Host ""
     
-    # --- PHẦN MAC ADDRESS (PHÂN LOẠI CHI TIẾT LAN/WIFI/BLUETOOTH + CĂN THẲNG HÀNG) ---
+    # MAC
     Show-Line "MAC Address" ""
     $netAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.MACAddress -and $_.PhysicalAdapter -eq $true }
     foreach ($adapter in $netAdapters) {
@@ -345,12 +304,8 @@ function Show-Menu-IT {
         elseif ($adapter.Name -match "Bluetooth") { $Type = "Bluetooth" }
         
         $LabelName = "$Type - $($adapter.Name)"
-        
-        # In Label Card mạng màu xanh dương nhạt (giống SubLine nhưng không in dấu : ở đây)
         $script:ReportLines.Add(("  $LabelName"))
         Write-Host "  $LabelName" -ForegroundColor Blue
-        
-        # In dấu : thẳng hàng với các thông số cấp 2 ở trên để hiển thị địa chỉ MAC
         Show-SubLine "" $adapter.MACAddress
     }
     Write-Host ""
@@ -361,23 +316,13 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Export HTML (Tự động xóa file cũ nếu có và upload lên Server)
+    # Đẩy báo cáo HTML thẳng lên mạng LAN Server (Không lưu Local .html)
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
     $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
-    
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
-    $LocalFolder = "C:\SW\Reports"
     
-    if (-not (Test-Path $LocalFolder)) { 
-        New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null 
-    }
-    $HtmlFile = Join-Path $LocalFolder $FileNameReport
-    
-    # 1. Ghi file Local (Không cần Remove-Item trước)
-    [System.IO.File]::WriteAllText($HtmlFile, $HtmlContent)
-
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
@@ -387,19 +332,15 @@ function Show-Menu-IT {
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
-            
-            # 2. Ghi file lên Server (Đã sửa từ $HtmlFile thành $NetworkFile và bỏ Remove-Item)
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
-            
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] OK -> Nhung folder mang chan quyen ghi/xoa!" -ForegroundColor Red
+            Write-Host "[ONLINE] OK -> Folder mang dang chan quyen ghi báo cáo!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server '$ServerHost', da cap nhat bao cao tai local C:\SW\Reports" -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mạng '$ServerHost'. Bo qua luu bao cao." -ForegroundColor DarkGray
     }
 
-    # Ktra Path
     Show-Line "SOFTWARE Path" $SourceSW
     Show-Line "SOFTWARE2 Path" $SourceSW2
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
@@ -407,24 +348,14 @@ function Show-Menu-IT {
     Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
     $topMenu = Read-Host
     switch ($topMenu) {
-        "111" { GoTo-IT-111 }
-        "115" { GoTo-IT-115 }
-        "113" { GoTo-IT-113 }
-        default { return }
+        "111" { return }           # Nạp lại chính vòng lặp Menu chính
+        "113" { Invoke-IT113-Menu } # Gọi thẳng Hàm của Tool 113 trên RAM
+        "115" { Invoke-IT115-Menu } # Gọi thẳng Hàm của Tool 115 trên RAM
+        default { exit }            # Thoát tiến trình
     }
 }
 
-function GoTo-IT-111 {
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$MainScript`""
-    exit
+# Vòng lặp duy trì giao diện liên tục trong bộ nhớ RAM
+while ($true) { 
+    Show-Menu-IT 
 }
-function GoTo-IT-115 {
-    Run-IT-xxx "$IT115Script\IT-115.ps1"
-    return
-}
-function GoTo-IT-113 {
-    Run-IT-xxx "$IT113Script\IT-113.ps1"
-    return
-}
-
-while ($true) { Show-Menu-IT }
