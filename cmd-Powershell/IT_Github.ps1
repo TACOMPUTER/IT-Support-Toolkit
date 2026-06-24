@@ -6,22 +6,19 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
-# Thống nhất đường dẫn cục bộ tại C:\SW
+# Thống nhất đường dẫn cục bộ tại C:\SW chỉ dùng cho EXE và Reports
 $SystemDriveSW  = "C:\SW"
-$LocalScriptPath = Join-Path $SystemDriveSW "IT_Github.ps1"
 $DestExePath     = Join-Path $SystemDriveSW "IT_Github.exe"
 
-# URL để tự nâng quyền Admin từ RAM nếu chạy lần đầu qua Web
+# URL gốc GitHub của anh
 $ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
 
-# ===== 💥 CƯỠNG BỨC GIẢI PHÓNG RAM - DIỆT TIẾN TRÌNH TREO NGẦM =====
+# ===== 💥 CƯỠNG BỨC GIẢI PHÓNG TIẾN TRÌNH TREO NGẦM =====
 $currentPID = $PID
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='IT_Github.exe'" | Where-Object {
     $_.ProcessId -ne $currentPID
 } | ForEach-Object {
-    try { 
-        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue 
-    } catch {}
+    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
 
 # ===== INIT WINAPI =====
@@ -39,18 +36,13 @@ public class WinAPI {
 }
 "@
 }
-$consoleHandle = [WinAPI]::GetConsoleWindow()
 
 # Check Admin
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $SkipAdminCheck -and -not $IsAdmin) {
-    Write-Host "⚠️ Dang nang quyen Administrator..." -ForegroundColor Yellow
-    if (Test-Path $LocalScriptPath) {
-        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`"" -Verb RunAs
-    } else {
-        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-RestMethod -Uri '$ScriptWebUrl' | Invoke-Expression`"" -Verb RunAs
-    }
+    Write-Host "⚠️ Dang nang quyen Administrator truc tiep tu RAM..." -ForegroundColor Yellow
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-RestMethod -Uri '$ScriptWebUrl' | Invoke-Expression`"" -Verb RunAs
     exit
 }
 
@@ -131,46 +123,32 @@ $ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 
 
 # =====================================================
-# CHÉP FILE VÀO C:\SW + TẠO SHORTCUT START MENU
+# CHÉP FILE PHỤ TRỢ (NẾU CÓ) + TẠO SHORTCUT START MENU
 # =====================================================
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
-# 1. Lưu/Đồng bộ file IT_Github.ps1 vào C:\SW
-if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
-    try {
-        $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
-        if (-not $CurrentCode) {
-            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
-        }
-        if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode) }
-    } catch {}
-}
-
-# 2. Sao chép file IT_Github.exe vào C:\SW
+# 1. Chỉ sao chép file IT_Github.exe nếu tìm thấy nguồn phân phối LAN/USB
 if (Test-Path $ExeSourcePath) {
     Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
-    Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
-}
-
-# 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe vừa chép
-try {
-    $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
-    $StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
-    $WshShell = New-Object -ComObject WScript.Shell
+    Write-Host "[SYSTEM] Da đồng bộ IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
     
-    if (Test-Path $StartMenuProgramslnk) { Remove-Item $StartMenuProgramslnk -Force }
-    
-    $ShortcutStartMenu = $WshShell.CreateShortcut($StartMenuProgramslnk)
-    $ShortcutStartMenu.TargetPath = $DestExePath
-    $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
-    $ShortcutStartMenu.Save()
-} catch {
-    Write-Host "[WARNING] Khong the tao shortcut Start Menu!" -ForegroundColor Yellow
+    try {
+        $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
+        $StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
+        $WshShell = New-Object -ComObject WScript.Shell
+        
+        if (Test-Path $StartMenuProgramslnk) { Remove-Item $StartMenuProgramslnk -Force }
+        
+        $ShortcutStartMenu = $WshShell.CreateShortcut($StartMenuProgramslnk)
+        $ShortcutStartMenu.TargetPath = $DestExePath
+        $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
+        $ShortcutStartMenu.Save()
+    } catch {}
 }
 
 
 # =====================================================
-# KHU VỰC CORE TIẾN TRÌNH CON - CHẠY HOÀN TOÀN TRÊN RAM
+# KHU VỰC CORE TIẾN TRÌNH CON - MENU CHẠY TRÊN RAM
 # =====================================================
 
 function Invoke-IT113-Menu {
@@ -242,9 +220,9 @@ function Invoke-IT115-Menu {
 
 
 # =====================================================
-# ⚡️ THU THẬP PHẦN CỨNG (QUÉT CHUẨN ĐÚNG 1 LẦN)
+# ⚡️ QUÉT PHẦN CỨNG 1 LẦN DUY NHẤT LÚC LÊN TOOL
 # =====================================================
-Write-Host "🔍 Chuan bi thong tin xac thuc phan cung..." -ForegroundColor Cyan
+Write-Host "🔍 Dang quet nhanh cau hinh may tinh..." -ForegroundColor Cyan
 
 $global:CS      = Get-CimInstance Win32_ComputerSystem
 $global:BB      = Get-CimInstance Win32_BaseBoard
@@ -265,12 +243,11 @@ $global:NetAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.M
 function Show-Menu-IT {
     Clear-Host
     
-    # Giải phóng hoàn toàn các đối tượng cũ ra khỏi RAM
+    # Giải phóng triệt để các biến rác thu gom chuỗi vòng trước
     [GC]::Collect()
     [GC]::WaitForPendingFinalizers()
     
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
-
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
     $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
 
@@ -318,7 +295,7 @@ function Show-Menu-IT {
         Write-Host $value -ForegroundColor Blue
     }
 
-    # Render data tĩnh cực nhẹ từ RAM
+    # Đọc dữ liệu tĩnh từ RAM
     Show-Line "Brand (OEM)" $global:CS.Manufacturer
     Show-Line "Mainboard" $global:BB.Manufacturer
     Show-Line "Product" $global:BB.Product
@@ -387,12 +364,13 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # --- 🚩 EXPORT HTML ---
+    # --- 🚩 XUẤT HTML BẰNG PHƯƠNG THỨC REPLACE (TUYỆT ĐỐI KHÔNG DÙNG -F) ---
     $Serial = $global:BIOS.SerialNumber
     $CleanModel = ($global:CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
+    # Đóng băng template HTML bằng chuỗi Raw Script
     $HtmlTemplate = @'
 <!DOCTYPE html>
 <html>
@@ -411,45 +389,28 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 <body><pre></pre></body>
 </html>
 '@
+    # Dùng phương thức Replace chính thống của hệ thống để nhét dữ liệu
     $HtmlContent = $HtmlTemplate.Replace("", $Serial).Replace("", $Content)
     
-    # --- 1. LUÔN LUÔN GHI LOCAL TRƯỚC ---
+    # --- GHI BÁO CÁO LOCAL ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
     try {
-        if (-not (Test-Path $LocalReportsFolder)) { 
-            New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
-        }
+        if (-not (Test-Path $LocalReportsFolder)) { New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
         $HtmlContent | Set-Content $LocalFile -Encoding UTF8 -Force
-        Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local $LocalReportsFolder" -ForegroundColor Green
-    } catch {
-        Write-Host "[LOCAL] ERROR -> Khong the tao folder hoac ghi file bao cao vao o C!" -ForegroundColor Red
-    }
+        Write-Host "[LOCAL] OK -> Da luu bao cao tai local $LocalReportsFolder" -ForegroundColor Green
+    } catch {}
     
-    # --- 2. KIỂM TRA MẠNG VÀ ĐẨY LÊN LAN SERVER ---
+    # --- ĐẨY BÁO CÁO LÊN SERVER MẠNG ---
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
-
-    $isOnline = $false
-    try {
-        if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
-            $isOnline = $true
-        }
-    } catch { $isOnline = $false }
-
-    if ($isOnline) {
+    if (try { Test-Connection -ComputerName $ServerHost -Count 1 -Quiet } catch { $false }) {
         try {
-            if (-not (Test-Path $NetworkFolder)) { 
-                New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
-            }
+            if (-not (Test-Path $NetworkFolder)) { New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
             $HtmlContent | Set-Content $NetworkFile -Encoding UTF8 -Force
-            Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
-        } catch {
-            Write-Host "[ONLINE] WARNING -> Co mang nhung folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
-        }
-    } else {
-        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua dong bo server." -ForegroundColor DarkGray
+            Write-Host "[ONLINE] OK -> Da cap nhat bao cao len Server ($ServerHost)" -ForegroundColor Cyan
+        } catch {}
     }
 
     Show-Line "SOFTWARE Path" $SourceSW
@@ -466,7 +427,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
     }
 }
 
-# Vòng lặp chính ổn định
+# Vòng lặp chính luôn giữ trạng thái sạch
 while ($true) { 
     Show-Menu-IT 
 }
