@@ -365,43 +365,67 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Cấu trúc nội dung file báo cáo HTML
+    # Cấu trúc nội dung file báo cáo HTML kèm CSS style của anh
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
-    $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
+    $HtmlContent = @"
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>$Serial</title>
+<style>
+body { font-family: 'Consolas', 'Courier New', monospace; background-color: #0c0c0c; color: #cccccc; margin: 20px; line-height: 1.4; }
+pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
+.green { color: #00ff00; font-weight: bold; }
+.yellow { color: #ffff00; }
+.blue { color: #3b8ec2; }
+.cyan { color: #00ffff; font-weight: bold; }
+</style>
+</head>
+<body><pre>$Content</pre></body>
+</html>
+"@
     
-    # --- TỰ ĐỘNG CHECK / TẠO FOLDER REPORTS VÀ XUẤT FILE ---
+    # --- 1. LUÔN LUÔN TẠO FOLDER REPORTS VÀ XUẤT FILE LOCAL TRƯỚC ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
     try {
         if (-not (Test-Path $LocalReportsFolder)) { 
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
-        [System.IO.File]::WriteAllText($LocalFile, $HtmlContent)
+        $HtmlContent | Set-Content $LocalFile -Encoding UTF8 -Force
         Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
-        Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
+        Write-Host "[LOCAL] ERROR -> Khong the tao folder hoac ghi file bao cao vao o C!" -ForegroundColor Red
     }
     
-    # --- ĐẨY BẢN TRÙNG LẶP LÊN SERVER MẠNG LAN ---
+    # --- 2. KIỂM TRA MẠNG VÀ ĐẨY TIẾP BẢN TRÙNG LẶP LÊN SERVER MẠNG LAN ---
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
-    if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
+    $isOnline = $false
+    try {
+        if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
+            $isOnline = $true
+        }
+    } catch { $isOnline = $false }
+
+    if ($isOnline) {
         try {
             if (-not (Test-Path $NetworkFolder)) { 
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
-            [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
+            $HtmlContent | Set-Content $NetworkFile -Encoding UTF8 -Force
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
+            Write-Host "[ONLINE] WARNING -> Co mang nhung folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', hoan tat chay phan mem." -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua đồng bộ server." -ForegroundColor DarkGray
     }
 
     Show-Line "SOFTWARE Path" $SourceSW
