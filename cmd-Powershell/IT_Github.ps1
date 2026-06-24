@@ -309,15 +309,36 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Export HTML
+    # Export HTML (Tích hợp Auto Upload lên Server nếu có kết nối)
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
     $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
+    
+    $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     $LocalFolder = "C:\SW\Reports"
     if (-not (Test-Path $LocalFolder)) { New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null }
-    $HtmlFile = Join-Path $LocalFolder ("{0}_{1}.html" -f $CleanModel, $Serial)
+    $HtmlFile = Join-Path $LocalFolder $FileNameReport
     $HtmlContent | Set-Content $HtmlFile -Force
+
+    # Logic kiểm tra kết nối đến Server 'IT'
+    $ServerHost = "IT"
+    $NetworkFolder = "\\$ServerHost\Guest\Computer list"
+
+    if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
+        try {
+            if (-not (Test-Path $NetworkFolder)) { 
+                New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
+            }
+            $NetworkFile = Join-Path $NetworkFolder $FileNameReport
+            $HtmlContent | Set-Content $NetworkFile -Force
+            Write-Host "🚀 Online mode: Da tu dong up bao cao len Server ($ServerHost)" -ForegroundColor Cyan
+        } catch {
+            Write-Host "⚠️ Offline mode: Ket noi Server OK nhung khong co quyen ghi vao o mang!" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "⚠️ Offline mode: Khong thay Server '$ServerHost', da luu bao cao tai local C:\SW\Reports" -ForegroundColor DarkGray
+    }
 
     # Ktra Path
     Show-Line "SOFTWARE Path" $SourceSW
