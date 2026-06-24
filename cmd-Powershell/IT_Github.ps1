@@ -309,7 +309,7 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Export HTML (Tích hợp Auto Upload lên Server nếu có kết nối)
+    # Export HTML (Tự động xóa file cũ nếu có và upload lên Server)
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
@@ -317,11 +317,19 @@ function Show-Menu-IT {
     
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     $LocalFolder = "C:\SW\Reports"
-    if (-not (Test-Path $LocalFolder)) { New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null }
+    
+    # 1. Xử lý tại Local C:\SW\Reports
+    if (-not (Test-Path $LocalFolder)) { 
+        New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null 
+    }
     $HtmlFile = Join-Path $LocalFolder $FileNameReport
+    # Nếu file đã tồn tại ở local, tiến hành xóa trước khi tạo mới
+    if (Test-Path $HtmlFile) { 
+        Remove-Item -Path $HtmlFile -Force -ErrorAction SilentlyContinue 
+    }
     $HtmlContent | Set-Content $HtmlFile -Force
 
-    # Logic kiểm tra kết nối đến Server 'IT'
+    # 2. Xử lý đẩy lên Server 'IT' nếu Online
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
@@ -331,13 +339,19 @@ function Show-Menu-IT {
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
+            
+            # Nếu file đã tồn tại trên Server, tiến hành xóa trước khi tạo mới
+            if (Test-Path $NetworkFile) { 
+                Remove-Item -Path $NetworkFile -Force -ErrorAction SilentlyContinue 
+            }
+            
             $HtmlContent | Set-Content $NetworkFile -Force
-            Write-Host "🚀 Online mode: Da tu dong up bao cao len Server ($ServerHost)" -ForegroundColor Cyan
+            Write-Host "🚀 Online mode: Da xoa file cu va cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "⚠️ Offline mode: Ket noi Server OK nhung khong co quyen ghi vao o mang!" -ForegroundColor Yellow
+            Write-Host "⚠️ Offline mode: Ket noi Server OK nhung folder mang chan quyen ghi/xoa!" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "⚠️ Offline mode: Khong thay Server '$ServerHost', da luu bao cao tai local C:\SW\Reports" -ForegroundColor DarkGray
+        Write-Host "⚠️ Offline mode: Khong thay Server '$ServerHost', da cap nhat bao cao tai local C:\SW\Reports" -ForegroundColor DarkGray
     }
 
     # Ktra Path
