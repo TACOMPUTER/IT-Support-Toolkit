@@ -363,12 +363,12 @@ function Show-Menu-IT {
                 Remove-Item -Path $NetworkFile -Force -ErrorAction SilentlyContinue 
             }
             $HtmlContent | Set-Content $NetworkFile -Force
-            Write-Host "🚀 Online mode: Da xoa file cu va cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
+            Write-Host "[ONLINE] OK -> Da xoa file cu va cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "⚠️ Offline mode: Ket noi Server OK nhung folder mang chan quyen ghi/xoa!" -ForegroundColor Yellow
+            Write-Host "[ONLINE] OK -> Nhung folder mang chan quyen ghi/xoa!" -ForegroundColor Red
         }
     } else {
-        Write-Host "⚠️ Offline mode: Khong thay Server '$ServerHost', da cap nhat bao cao tai local C:\SW\Reports" -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server '$ServerHost', da cap nhat bao cao tai local C:\SW\Reports" -ForegroundColor DarkGray
     }
 
     # Ktra Path
