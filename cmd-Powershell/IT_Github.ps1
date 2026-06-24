@@ -274,7 +274,6 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Trả về hàm gốc chạy ổn định của anh ban đầu
     function Show-Line {
         param($label, $value)
         if ($value) {
@@ -383,13 +382,13 @@ function Show-Menu-IT {
     $Content = $script:ReportLines -join "`r`n"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
-    # SỬA TẬN GỐC: Dùng @' ... '@ đơn để đóng băng CSS ngoặc nhọn {}, không cho PowerShell tự quét trùng -f
+    # KHẮC PHỤC TRIỆT ĐỂ: Dùng chuỗi thô đóng băng toàn bộ, chừa cổng kết nối riêng biệt không xài toán tử `-f` lên CSS
     $HtmlTemplate = @'
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>{0}</title>
+<title></title>
 <style>
 body { font-family: 'Consolas', 'Courier New', monospace; background-color: #0c0c0c; color: #cccccc; margin: 20px; line-height: 1.4; }
 pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
@@ -399,11 +398,11 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 .cyan { color: #00ffff; font-weight: bold; }
 </style>
 </head>
-<body><pre>{1}</pre></body>
+<body><pre></pre></body>
 </html>
 '@
-    # Giờ mới map dữ liệu vào một cách an toàn
-    $HtmlContent = $HtmlTemplate -f $Serial, $Content
+    # Swap dữ liệu trực tiếp bằng phương thức Replace của .NET chống crash chuỗi
+    $HtmlContent = $HtmlTemplate.Replace("", $Serial).Replace("", $Content)
     
     # --- 1. LUÔN LUÔN GHI LOCAL TRƯỚC ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
