@@ -130,11 +130,17 @@ if ($CurrentFontSize -ne $DesiredFontSize) {
     } catch { }
 }
 
-# Khai báo biến
+# =====================================================
+# KHU VỰC ĐỊNH NGHĨA BIẾN HỆ THỐNG (FIX CHUẨN THEO VỊ TRÍ MỚI)
+# =====================================================
+# $CurrentScriptRoot hiện tại là: ...\IT-Support-Toolkit\cmd-Powershell
 $ITScriptRoot = $CurrentScriptRoot
+
+# Folder 'IT' nằm ngay bên trong 'cmd-Powershell', không cần nhảy về thư mục cha nữa!
 $LibScript   = Join-Path $ITScriptRoot "IT\Library"
 $IT113Script = Join-Path $ITScriptRoot "IT\IT-113"
 $IT115Script = Join-Path $ITScriptRoot "IT\IT-115"
+
 # Tự động quét tìm đường dẫn Software thực tế trên các ổ đĩa của máy
 $TargetFolder = "OneDrive\TACOMPUTER\Software"
 $SourceSW = "C:\SW" # Giá trị mặc định nếu không tìm thấy ổ nào khác
