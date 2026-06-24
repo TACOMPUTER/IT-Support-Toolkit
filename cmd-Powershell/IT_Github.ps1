@@ -155,20 +155,27 @@ if (Test-Path $ExeSourcePath) {
     Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
 }
 
-# 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe vừa chép
+# 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe
 try {
-    $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
-    $StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
+    # Lấy đường dẫn Start Menu cho User hiện tại
+    $ProgramsFolder = [Environment]::GetFolderPath("Programs")
+    $ShortcutPath = Join-Path $ProgramsFolder "IT_Github.lnk"
+    
     $WshShell = New-Object -ComObject WScript.Shell
     
-    if (Test-Path $StartMenuProgramslnk) { Remove-Item $StartMenuProgramslnk -Force }
+    # Xóa bản cũ nếu có
+    if (Test-Path $ShortcutPath) { Remove-Item $ShortcutPath -Force }
     
-    $ShortcutStartMenu = $WshShell.CreateShortcut($StartMenuProgramslnk)
-    $ShortcutStartMenu.TargetPath = $DestExePath
-    $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
-    $ShortcutStartMenu.Save()
+    # Tạo shortcut mới
+    $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
+    $Shortcut.TargetPath = $DestExePath
+    $Shortcut.WorkingDirectory = $SystemDriveSW
+    $Shortcut.Description = "IT_Github Support Tool"
+    $Shortcut.Save()
+    
+    Write-Host "[SYSTEM] Đã tạo thành công Shortcut tại: $ShortcutPath" -ForegroundColor Green
 } catch {
-    Write-Host "[WARNING] Không thể tạo shortcut Start Menu!" -ForegroundColor Yellow
+    Write-Host "[WARNING] Không thể tạo shortcut Start Menu: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
 
