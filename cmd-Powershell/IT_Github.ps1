@@ -156,6 +156,37 @@ if (Test-Path $ExeSourcePath) {
 }
 
 # =====================================================
+# TỰ ĐỘNG TẠO SHORTCUT VÀO START MENU
+# =====================================================
+try {
+    $ShortcutName = "IT_Github.exe.lnk"
+    $ProgramsPath = [System.IO.Path]::Combine($env:APPDATA, "Microsoft\Windows\Start Menu\Programs")
+    $ShortcutPath = [System.IO.Path]::Combine($ProgramsPath, $ShortcutName)
+
+    # Chỉ tạo nếu file .exe đích đã tồn tại (đảm bảo đã chép vào C:\SW)
+    if (Test-Path $DestExePath) {
+        $WshShell = New-Object -ComObject WScript.Shell
+        
+        # Tạo shortcut nếu chưa có
+        if (-not (Test-Path $ShortcutPath)) {
+            $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
+            $Shortcut.TargetPath = $DestExePath
+            $Shortcut.WorkingDirectory = $SystemDriveSW
+            $Shortcut.Description = "IT Github by TACOMPUTER"
+            $Shortcut.Save()
+            
+            # Ép Windows cập nhật icon ngay lập tức
+            $Shell = New-Object -ComObject Shell.Application
+            $Shell.NameSpace($ProgramsPath).ParseName($ShortcutName).InvokeVerb("Properties") | Out-Null
+            
+            Write-Host "[SYSTEM] Đã tạo Shortcut tại Start Menu!" -ForegroundColor Green
+        }
+    }
+} catch {
+    # Không hiện lỗi gây nhiễu nếu không tạo được
+}
+
+# =====================================================
 # KHU VỰC CORE TIẾN TRÌNH CON - CHẠY HOÀN TOÀN TRÊN RAM
 # =====================================================
 
