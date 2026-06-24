@@ -262,9 +262,7 @@ function Show-Menu-IT {
     $left  = [Math]::Floor($pad / 2)
     $right = $pad - $left
     
-    $HeaderRow = ("+" * $left) + $text + ("+" * $right)
     $script:ReportLines.Add("<span class='gray'>" + ("+" * $left) + "</span><span class='white'>$text</span><span class='gray'>" + ("+" * $right) + "</span>")
-    
     Write-Host ("+" * $left) -ForegroundColor DarkGray -NoNewline
     Write-Host $text -NoNewline
     Write-Host ("+" * $right) -ForegroundColor DarkGray
@@ -284,7 +282,7 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Tối ưu xuất dòng cấp 1 kèm thẻ Span Color cho HTML
+    # Ép kiểu dữ liệu Raw HTML để không bị Encode thành text thường
     function Show-Line {
         param($label, $value)
         $fmtLabel = "{0,-$global:LabelWidth}" -f $label
@@ -293,7 +291,6 @@ function Show-Menu-IT {
         Write-Host $value -ForegroundColor Yellow
     }
 
-    # Tối ưu xuất dòng cấp 2 kèm thẻ Span Color cho HTML
     function Show-SubLine {
         param($label, $value)
         $fmtSubLabel = "  {0,-$global:SubLabelWidth}" -f $label
@@ -387,9 +384,11 @@ function Show-Menu-IT {
     $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
     Write-Host $BorderLine -ForegroundColor DarkGray
     
-    # --- KHỞI TẠO CẤU TRÚC HTML NHÚNG CSS TOÀN DIỆN ---
+    # --- KHỞI TẠO CẤU TRÚC HTML SỬ DỤNG ĐƯỜNG TRUYỀN NGUYÊN BẢN (RAW-JOIN) ---
     $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber.Trim() } else { "UnknownSerial" }
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
+    
+    # Nối mảng chuỗi với xuống dòng chuẩn của HTML pre
     $Content = $script:ReportLines -join "`r`n"
     
     $HtmlTemplate = @"
@@ -418,15 +417,17 @@ function Show-Menu-IT {
 
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
-    # --- TỰ ĐỘNG CHECK / TẠO FOLDER REPORTS VÀ XUẤT FILE ---
+    # --- GHI FILE BẰNG UTF8 KHÔNG BOM ĐỂ TRÌNH DUYỆT KHÔNG ĐỌC LỖI THẺ ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
     try {
         if (-not (Test-Path $LocalReportsFolder)) { 
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
-        [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate)
-        Write-Host "[LOCAL] OK -> Da cap nhat bao cao co mau tai local $LocalReportsFolder" -ForegroundColor Green
+        
+        # Dùng .NET Engine ghi trực tiếp chuỗi gốc để tránh PowerShell can thiệp cấu trúc
+        [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
+        Write-Host "[LOCAL] OK -> Da cap nhat bao cao CO MAU SAC tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
         Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
@@ -441,7 +442,7 @@ function Show-Menu-IT {
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
-            [System.IO.File]::WriteAllText($NetworkFile, $HtmlTemplate)
+            [System.IO.File]::WriteAllText($NetworkFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao mau len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
             Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
@@ -453,7 +454,6 @@ function Show-Menu-IT {
     Show-Line "SOFTWARE Path" $SourceSW
     Show-Line "SOFTWARE2 Path" $SourceSW2
     
-    $BottomBorder = "<span class='gray'>$BorderLine</span>"
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
 
     Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
