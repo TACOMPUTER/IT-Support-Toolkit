@@ -198,16 +198,19 @@ if (Test-Path $ExePath) {
 
 # 3. Tạo lại Shortcut trong Start Menu trỏ vào file C:\SW\IT_Github.exe vừa copy
 try {
-    # Khởi tạo lại WshShell chống lỗi không nhận diện đối tượng
+    # Khởi tạo đối tượng COM để làm việc với Shortcut
     $WshShell = New-Object -ComObject WScript.Shell
     
-    # Xóa shortcut cũ nếu có
+    # Xóa shortcut cũ nếu tồn tại trước đó
     if (Test-Path $ExpandedStartMenuLnk) { Remove-Item $ExpandedStartMenuLnk -Force }
     
-    # Tạo shortcut mới trỏ thẳng vào ổ C:\SW để chạy ổn định
+    # Khởi tạo tạo shortcut mới
     $ShortcutStartMenu = $WshShell.CreateShortcut($ExpandedStartMenuLnk)
-    $ShortcutStartMenu.TargetPath = $DestExePath  # ĐÃ SỬA: Trỏ vào file trong C:\SW thay vì file gốc
-    $ShortcutStartMenu.WorkingDirectory = $SystemDriveSW
+    $ShortcutStartMenu.TargetPath = $DestExePath        # Trỏ chuẩn vào C:\SW\IT_Github.exe
+    
+    # ĐÃ SỬA: Phải giữ thư mục gốc của bộ source để file EXE tìm thấy file .ps1 ngầm
+    $ShortcutStartMenu.WorkingDirectory = $ITScriptRoot 
+    
     $ShortcutStartMenu.Save()
 } catch {
     Write-Host "[WARNING] Khong the tao shortcut Start Menu!" -ForegroundColor Yellow
