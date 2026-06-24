@@ -372,20 +372,20 @@ function Show-Menu-IT {
     $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
-    # --- XỬ LÝ LƯU BÁO CÁO LOCAL (LUÔN LUÔN TẠO) ---
-    $LocalFolder = "C:\SW\Reports"
+    # --- TỰ ĐỘNG CHECK / TẠO FOLDER REPORTS VÀ XUẤT FILE ---
+    $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
     try {
-        if (-not (Test-Path $LocalFolder)) { 
-            New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null 
+        if (-not (Test-Path $LocalReportsFolder)) { 
+            New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
-        $LocalFile = Join-Path $LocalFolder $FileNameReport
+        $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
         [System.IO.File]::WriteAllText($LocalFile, $HtmlContent)
-        Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local C:\SW\Reports" -ForegroundColor Green
+        Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
-        Write-Host "[LOCAL] WARNING -> Khong the ghi bao cao xuong o C!" -ForegroundColor Yellow
+        Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
     
-    # --- XỬ LÝ LƯU BÁO CÁO QUA SERVER MẠNG LAN (BẢN TRÙNG LẶP) ---
+    # --- ĐẨY BẢN TRÙNG LẶP LÊN SERVER MẠNG LAN ---
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
@@ -398,10 +398,10 @@ function Show-Menu-IT {
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] OK -> Nhung folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
+            Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', dung ban bao cao local." -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', hoan tat chay phan mem." -ForegroundColor DarkGray
     }
 
     Show-Line "SOFTWARE Path" $SourceSW
