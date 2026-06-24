@@ -139,7 +139,7 @@ if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.M
     try {
         $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
         if (-not $CurrentCode) {
-            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
+            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -TimeoutSec 5 -ErrorAction SilentlyContinue
         }
         if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode) }
     } catch {}
@@ -274,27 +274,29 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Hàm in và gán màu cho HTML dòng chính
+    # Sửa lỗi format string: Cộng chuỗi trực tiếp, không dùng toán tử -f lên giá trị phần cứng
     function Show-Line {
         param($label, $value)
+        $paddedLabel = "{0,-$global:LabelWidth}" -f $label
         if ($value) {
-            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span><span class='yellow'>{1}</span>" -f $label, $value)
+            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span><span class='yellow'>" + $value + "</span>")
         } else {
-            $script:ReportLines.Add("<span class='green'>{0,-$global:LabelWidth} &gt;&gt;&gt; </span>" -f $label)
+            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span>")
         }
-        Write-Host ("{0,-$global:LabelWidth} >>> " -f $label) -NoNewline -ForegroundColor Green
+        Write-Host ($paddedLabel + " >>> ") -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
-    # Hàm in và gán màu cho HTML dòng phụ (Sub)
     function Show-SubLine {
         param($label, $value)
+        $paddedSubLabel = "{0,-$global:SubLabelWidth}" -f $label
         if ($label) {
-            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f $label, $value)
+            $script:ReportLines.Add("<span class='blue'>  " + $paddedSubLabel + " : " + $value + "</span>")
         } else {
-            $script:ReportLines.Add("<span class='blue'>  {0,-$global:SubLabelWidth} : {1}</span>" -f "", $value)
+            $paddedEmpty = "{0,-$global:SubLabelWidth}" -f ""
+            $script:ReportLines.Add("<span class='blue'>  " + $paddedEmpty + " : " + $value + "</span>")
         }
-        Write-Host ("  {0,-$global:SubLabelWidth} : " -f $label) -NoNewline -ForegroundColor Blue
+        Write-Host ("  " + $paddedSubLabel + " : ") -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
 
@@ -313,7 +315,7 @@ function Show-Menu-IT {
     Show-Line "Serial" $BIOS.SerialNumber
     Show-Line "BIOS ver" $BIOS.SMBIOSBIOSVersion
     Write-Host ""
-    $script:ReportLines.Add("") # Dòng trống trong HTML
+    $script:ReportLines.Add("") 
 
     if ($CPU.Count -gt 1) {
         Show-Line "CPU" ""
@@ -378,7 +380,7 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # --- 🚩 EXPORT HTML (TỐI ƯU: LUÔN LUÔN GHI LOCAL + TỰ ĐỘNG ĐẨY SERVER NẾU ONLINE) ---
+    # --- 🚩 EXPORT HTML ---
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
@@ -403,7 +405,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 </html>
 "@
     
-    # --- 1. LUÔN LUÔN TẠO FOLDER REPORTS VÀ XUẤT FILE LOCAL TRƯỚC ---
+    # --- 1. LUÔN LUÔN GHI LOCAL TRƯỚC ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
     try {
         if (-not (Test-Path $LocalReportsFolder)) { 
@@ -416,7 +418,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
         Write-Host "[LOCAL] ERROR -> Khong the tao folder hoac ghi file bao cao vao o C!" -ForegroundColor Red
     }
     
-    # --- 2. KIỂM TRA MẠNG VÀ ĐẨY TIẾP BẢN TRÙNG LẶP LÊN SERVER MẠNG LAN ---
+    # --- 2. KIỂM TRA MẠNG VÀ ĐẨY LÊN LAN SERVER ---
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
@@ -439,7 +441,7 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
             Write-Host "[ONLINE] WARNING -> Co mang nhung folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua đồng bộ server." -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua dong bo server." -ForegroundColor DarkGray
     }
 
     Show-Line "SOFTWARE Path" $SourceSW
