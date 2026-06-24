@@ -1,4 +1,4 @@
-﻿param(
+param(
     [int]$PSWidth = 80,
     [int]$PSHeight = 55,
     [int]$PosX = 0,
