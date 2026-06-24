@@ -12,7 +12,7 @@ param(
 
 # Thống nhất đường dẫn cục bộ tại C:\SW
 $SystemDriveSW  = "C:\SW"
-$LocalScriptPath = Join-Path $SystemDriveSW "IT_Github.ps1"
+$LocalScriptPath = Join-Path $SystemDriveSW "IT_Github-call.ps1"
 $DestExePath     = Join-Path $SystemDriveSW "IT_Github.exe"
 
 # URL để tự nâng quyền Admin từ RAM nếu chạy lần đầu qua Web
@@ -138,7 +138,7 @@ $ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 # =====================================================
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
-# 1. Lưu/Đồng bộ file IT_Github.ps1 vào C:\SW
+# 1. Lưu/Đồng bộ file IT_Github-call.ps1 vào C:\SW
 if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
     try {
         $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
