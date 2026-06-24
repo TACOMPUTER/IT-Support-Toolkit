@@ -252,38 +252,52 @@ function Show-Menu-IT {
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
     $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
 
-    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+    # Thanh viền trên giao diện
+    $BorderLine = "+" * $LineWidth
+    $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
+    Write-Host $BorderLine -ForegroundColor DarkGray
+    
     $text = " IT support, Scripted by TACOMPUTER & GPT, 0933.848.990 "
     $pad = [Math]::Max(0, $LineWidth - $text.Length)
     $left  = [Math]::Floor($pad / 2)
     $right = $pad - $left
+    
+    $HeaderRow = ("+" * $left) + $text + ("+" * $right)
+    $script:ReportLines.Add("<span class='gray'>" + ("+" * $left) + "</span><span class='white'>$text</span><span class='gray'>" + ("+" * $right) + "</span>")
+    
     Write-Host ("+" * $left) -ForegroundColor DarkGray -NoNewline
     Write-Host $text -NoNewline
     Write-Host ("+" * $right) -ForegroundColor DarkGray
-    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+    
+    $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
+    Write-Host $BorderLine -ForegroundColor DarkGray
 
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
         Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
-        $script:ReportLines.Add("[ Laptop Information ]")
+        $script:ReportLines.Add("<span class='cyan'>[ Laptop Information ]</span>")
     } else {
         Write-Host "[ PC Information ]" -ForegroundColor Cyan
-        $script:ReportLines.Add("[ PC Information ]")
+        $script:ReportLines.Add("<span class='cyan'>[ PC Information ]</span>")
     }
 
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
+    # Tối ưu xuất dòng cấp 1 kèm thẻ Span Color cho HTML
     function Show-Line {
         param($label, $value)
-        $script:ReportLines.Add(("{0,-$global:LabelWidth} >>> {1}" -f $label, $value))
+        $fmtLabel = "{0,-$global:LabelWidth}" -f $label
+        $script:ReportLines.Add("<span class='green'>$fmtLabel &gt;&gt;&gt; </span><span class='yellow'>$value</span>")
         Write-Host ("{0,-$global:LabelWidth} >>> " -f $label) -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
+    # Tối ưu xuất dòng cấp 2 kèm thẻ Span Color cho HTML
     function Show-SubLine {
         param($label, $value)
-        $script:ReportLines.Add(("  {0,-$global:SubLabelWidth} : {1}" -f $label, $value))
+        $fmtSubLabel = "  {0,-$global:SubLabelWidth}" -f $label
+        $script:ReportLines.Add("<span class='blue'>$fmtSubLabel : $value</span>")
         Write-Host ("  {0,-$global:SubLabelWidth} : " -f $label) -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
@@ -302,6 +316,8 @@ function Show-Menu-IT {
     Show-Line "Model" $CS.Model
     Show-Line "Serial" $BIOS.SerialNumber
     Show-Line "BIOS ver" $BIOS.SMBIOSBIOSVersion
+    
+    $script:ReportLines.Add("")
     Write-Host ""
 
     if ($CPU.Count -gt 1) {
@@ -342,6 +358,8 @@ function Show-Menu-IT {
     foreach ($g in $GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
     foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
+    
+    $script:ReportLines.Add("")
     Write-Host ""
     
     # MAC Info
@@ -353,23 +371,51 @@ function Show-Menu-IT {
         elseif ($adapter.Name -match "Bluetooth") { $Type = "Bluetooth" }
         
         $LabelName = "$Type - $($adapter.Name)"
-        $script:ReportLines.Add(("  $LabelName"))
+        $script:ReportLines.Add("<span class='blue'>  $LabelName</span>")
         Write-Host "  $LabelName" -ForegroundColor Blue
         Show-SubLine "" $adapter.MACAddress
     }
+    
+    $script:ReportLines.Add("")
     Write-Host ""
 
     $version = $RegOS.DisplayVersion
     if (!$version) { $version = $RegOS.ReleaseId }
     Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
     Show-Line "Current User" $currentUser
-    Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Cấu trúc nội dung file báo cáo HTML
-    $Serial = $BIOS.SerialNumber
+    $script:ReportLines.Add("<span class='gray'>$BorderLine</span>")
+    Write-Host $BorderLine -ForegroundColor DarkGray
+    
+    # --- KHỞI TẠO CẤU TRÚC HTML NHÚNG CSS TOÀN DIỆN ---
+    $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber.Trim() } else { "UnknownSerial" }
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
-    $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
+    
+    $HtmlTemplate = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>System Report - $CleanModel</title>
+    <style>
+        body { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 20px; font-size: 14px; line-height: 1.4; }
+        pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+        .gray { color: #555555; font-weight: bold; }
+        .white { color: #ffffff; font-weight: bold; }
+        .cyan { color: #00ffff; font-weight: bold; }
+        .green { color: #00ff00; }
+        .yellow { color: #ffff00; font-weight: bold; }
+        .blue { color: #3b82f6; }
+        .magenta { color: #ff00ff; }
+    </style>
+</head>
+<body>
+    <pre>$Content</pre>
+</body>
+</html>
+"@
+
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
     # --- TỰ ĐỘNG CHECK / TẠO FOLDER REPORTS VÀ XUẤT FILE ---
@@ -379,8 +425,8 @@ function Show-Menu-IT {
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
-        [System.IO.File]::WriteAllText($LocalFile, $HtmlContent)
-        Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local $LocalReportsFolder" -ForegroundColor Green
+        [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate)
+        Write-Host "[LOCAL] OK -> Da cap nhat bao cao co mau tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
         Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
@@ -395,8 +441,8 @@ function Show-Menu-IT {
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
-            [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
-            Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
+            [System.IO.File]::WriteAllText($NetworkFile, $HtmlTemplate)
+            Write-Host "[ONLINE] OK -> Da cap nhat bao cao mau len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
             Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
@@ -406,6 +452,8 @@ function Show-Menu-IT {
 
     Show-Line "SOFTWARE Path" $SourceSW
     Show-Line "SOFTWARE2 Path" $SourceSW2
+    
+    $BottomBorder = "<span class='gray'>$BorderLine</span>"
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
 
     Write-Host "User vui long nhap so 115 de duoc ho tro: " -NoNewline
