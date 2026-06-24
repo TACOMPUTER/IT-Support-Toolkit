@@ -139,7 +139,7 @@ if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.M
     try {
         $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
         if (-not $CurrentCode) {
-            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -TimeoutSec 5 -ErrorAction SilentlyContinue
+            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
         }
         if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode) }
     } catch {}
@@ -265,38 +265,26 @@ function Show-Menu-IT {
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
         Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
-        $script:ReportLines.Add("<span class='cyan'>[ Laptop Information ]</span>")
+        $script:ReportLines.Add("[ Laptop Information ]")
     } else {
         Write-Host "[ PC Information ]" -ForegroundColor Cyan
-        $script:ReportLines.Add("<span class='cyan'>[ PC Information ]</span>")
+        $script:ReportLines.Add("[ PC Information ]")
     }
 
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Sửa lỗi format string: Cộng chuỗi trực tiếp, không dùng toán tử -f lên giá trị phần cứng
     function Show-Line {
         param($label, $value)
-        $paddedLabel = "{0,-$global:LabelWidth}" -f $label
-        if ($value) {
-            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span><span class='yellow'>" + $value + "</span>")
-        } else {
-            $script:ReportLines.Add("<span class='green'>" + $paddedLabel + " &gt;&gt;&gt; </span>")
-        }
-        Write-Host ($paddedLabel + " >>> ") -NoNewline -ForegroundColor Green
+        $script:ReportLines.Add(("{0,-$global:LabelWidth} >>> {1}" -f $label, $value))
+        Write-Host ("{0,-$global:LabelWidth} >>> " -f $label) -NoNewline -ForegroundColor Green
         Write-Host $value -ForegroundColor Yellow
     }
 
     function Show-SubLine {
         param($label, $value)
-        $paddedSubLabel = "{0,-$global:SubLabelWidth}" -f $label
-        if ($label) {
-            $script:ReportLines.Add("<span class='blue'>  " + $paddedSubLabel + " : " + $value + "</span>")
-        } else {
-            $paddedEmpty = "{0,-$global:SubLabelWidth}" -f ""
-            $script:ReportLines.Add("<span class='blue'>  " + $paddedEmpty + " : " + $value + "</span>")
-        }
-        Write-Host ("  " + $paddedSubLabel + " : ") -NoNewline -ForegroundColor Blue
+        $script:ReportLines.Add(("  {0,-$global:SubLabelWidth} : {1}" -f $label, $value))
+        Write-Host ("  {0,-$global:SubLabelWidth} : " -f $label) -NoNewline -ForegroundColor Blue
         Write-Host $value -ForegroundColor Blue
     }
 
@@ -315,7 +303,6 @@ function Show-Menu-IT {
     Show-Line "Serial" $BIOS.SerialNumber
     Show-Line "BIOS ver" $BIOS.SMBIOSBIOSVersion
     Write-Host ""
-    $script:ReportLines.Add("") 
 
     if ($CPU.Count -gt 1) {
         Show-Line "CPU" ""
@@ -356,7 +343,6 @@ function Show-Menu-IT {
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
     foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
     Write-Host ""
-    $script:ReportLines.Add("")
     
     # MAC Info
     Show-Line "MAC Address" ""
@@ -367,12 +353,11 @@ function Show-Menu-IT {
         elseif ($adapter.Name -match "Bluetooth") { $Type = "Bluetooth" }
         
         $LabelName = "$Type - $($adapter.Name)"
-        $script:ReportLines.Add("<span class='blue'>  $LabelName</span>")
+        $script:ReportLines.Add(("  $LabelName"))
         Write-Host "  $LabelName" -ForegroundColor Blue
         Show-SubLine "" $adapter.MACAddress
     }
     Write-Host ""
-    $script:ReportLines.Add("")
 
     $version = $RegOS.DisplayVersion
     if (!$version) { $version = $RegOS.ReleaseId }
@@ -380,68 +365,43 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # --- 🚩 EXPORT HTML ---
+    # Cấu trúc nội dung file báo cáo HTML
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
+    $HtmlContent = "<html><body><pre>$Content</pre></body></html>"
     $FileNameReport = "{0}_{1}.html" -f $CleanModel, $Serial
     
-    $HtmlContent = @"
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>$Serial</title>
-<style>
-body { font-family: 'Consolas', 'Courier New', monospace; background-color: #0c0c0c; color: #cccccc; margin: 20px; line-height: 1.4; }
-pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
-.green { color: #00ff00; font-weight: bold; }
-.yellow { color: #ffff00; }
-.blue { color: #3b8ec2; }
-.cyan { color: #00ffff; font-weight: bold; }
-</style>
-</head>
-<body><pre>$Content</pre></body>
-</html>
-"@
-    
-    # --- 1. LUÔN LUÔN GHI LOCAL TRƯỚC ---
+    # --- TỰ ĐỘNG CHECK / TẠO FOLDER REPORTS VÀ XUẤT FILE ---
     $LocalReportsFolder = Join-Path $SystemDriveSW "Reports"
     try {
         if (-not (Test-Path $LocalReportsFolder)) { 
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
-        $HtmlContent | Set-Content $LocalFile -Encoding UTF8 -Force
+        [System.IO.File]::WriteAllText($LocalFile, $HtmlContent)
         Write-Host "[LOCAL] OK -> Da cap nhat bao cao tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
-        Write-Host "[LOCAL] ERROR -> Khong the tao folder hoac ghi file bao cao vao o C!" -ForegroundColor Red
+        Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
     
-    # --- 2. KIỂM TRA MẠNG VÀ ĐẨY LÊN LAN SERVER ---
+    # --- ĐẨY BẢN TRÙNG LẶP LÊN SERVER MẠNG LAN ---
     $ServerHost = "IT"
     $NetworkFolder = "\\$ServerHost\Guest\Computer list"
 
-    $isOnline = $false
-    try {
-        if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
-            $isOnline = $true
-        }
-    } catch { $isOnline = $false }
-
-    if ($isOnline) {
+    if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
         try {
             if (-not (Test-Path $NetworkFolder)) { 
                 New-Item -Path $NetworkFolder -ItemType Directory -Force | Out-Null 
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
-            $HtmlContent | Set-Content $NetworkFile -Encoding UTF8 -Force
+            [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] WARNING -> Co mang nhung folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
+            Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua dong bo server." -ForegroundColor DarkGray
+        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost', hoan tat chay phan mem." -ForegroundColor DarkGray
     }
 
     Show-Line "SOFTWARE Path" $SourceSW
