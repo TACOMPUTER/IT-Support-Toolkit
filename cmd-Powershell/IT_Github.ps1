@@ -6,11 +6,13 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
-# Thống nhất URL chính thức của script trên GitHub để tải và chạy từ RAM/Local
-$ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
-$SystemDriveSW = "C:\SW"
+# Thống nhất đường dẫn cục bộ tại C:\SW
+$SystemDriveSW  = "C:\SW"
 $LocalScriptPath = Join-Path $SystemDriveSW "IT_Github.ps1"
-$DestExePath = Join-Path $SystemDriveSW "IT_Github.exe"
+$DestExePath     = Join-Path $SystemDriveSW "IT_Github.exe"
+
+# URL để tự nâng quyền Admin từ RAM nếu chạy lần đầu qua Web
+$ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
 
 # ===== INIT WINAPI =====
 if (-not ("WinAPI" -as [type])) {
@@ -34,7 +36,6 @@ $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 
 if (-not $SkipAdminCheck -and -not $IsAdmin) {
     Write-Host "⚠️ Dang nang quyen Administrator..." -ForegroundColor Yellow
-    # Nếu chạy local thì gọi file local, nếu chạy Web thì gọi URL Web
     if (Test-Path $LocalScriptPath) {
         Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`"" -Verb RunAs
     } else {
@@ -43,9 +44,18 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
     exit
 }
 
-# Thay đổi Window Title linh hoạt
+# Chỉ cho 1 script chạy
+$currentPID = $PID
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object {
+    $_.ProcessId -ne $currentPID -and
+    ($_.CommandLine -match "IT_Github.ps1" -or $_.CommandLine -match "Invoke-Expression")
+} | ForEach-Object {
+    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
+}
+
+# Title giao diện
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
-$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Hybrid RAM & Local"
+$host.UI.RawUI.WindowTitle = "Running IT_Github.ps1 $adminText <<< Powered by RAM"
 
 # Resize Console 
 try {
@@ -91,10 +101,10 @@ $heightPx = $rect.Bottom - $rect.Top
 
 
 # =====================================================
-# KHU VỰC QUÉT Ổ ĐĨA & THIẾT LẬP ĐƯỜNG DẪN 
+# KHU VỰC THIẾT LẬP ĐƯỜNG DẪN 
 # =====================================================
 $TargetFolder = "OneDrive\TACOMPUTER\Software"
-$SourceSW = "C:\SW" # Mặc định
+$SourceSW = "C:\SW" 
 
 $AllDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.Name -ne "C:\" }
 foreach ($d in $AllDrives) {
@@ -120,30 +130,34 @@ $ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 
 
 # =====================================================
-# TỰ ĐỘNG ĐỒNG BỘ FILE XUỐNG C:\SW VÀ TẠO SHORTCUT
+# CHÉP FILE VÀO C:\SW + TẠO SHORTCUT START MENU
 # =====================================================
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
-# 1. Ghi đè file IT_Github.ps1 tại Local
-try {
-    $WebCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
-    if ($WebCode) {
-        [System.IO.File]::WriteAllText($LocalScriptPath, $WebCode)
-    }
-} catch {}
+# 1. Lưu/Đồng bộ file IT_Github.ps1 vào C:\SW
+if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
+    try {
+        # Nếu đang chạy từ RAM (Web), lấy chính nội dung đang chạy ghi xuống đĩa
+        $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
+        if (-not $CurrentCode) {
+            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
+        }
+        if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode) }
+    } catch {}
+}
 
-# 2. Sao chép file IT_Github.exe từ Source đĩa vào C:\SW
+# 2. Sao chép file IT_Github.exe vào C:\SW
 if (Test-Path $ExeSourcePath) {
     Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
     Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
 }
 
-# 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe
+# 3. Tạo Shortcut Start Menu trỏ vào file C:\SW\IT_Github.exe vừa chép
 try {
     $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
     $StartMenuProgramslnk  = "$StartMenuProgramsPath\IT_Github.exe.lnk"
-    
     $WshShell = New-Object -ComObject WScript.Shell
+    
     if (Test-Path $StartMenuProgramslnk) { Remove-Item $StartMenuProgramslnk -Force }
     
     $ShortcutStartMenu = $WshShell.CreateShortcut($StartMenuProgramslnk)
@@ -156,11 +170,11 @@ try {
 
 
 # =====================================================
-# KHU VỰC CÁC HÀM TIẾN TRÌNH CON (CORE CHẠY TRÊN RAM)
+# KHU VỰC CORE TIẾN TRÌNH CON - CHẠY HOÀN TOÀN TRÊN RAM
 # =====================================================
 
+# --- MENU 113 CHẠY TRÊN RAM ---
 function Invoke-IT113-Menu {
-    # Tự động cấu hình Loại trừ Defender
     $requiredPaths = @("\\IT\Software", "\\IT\Software2", "\\IT-E580\Software", "\\IT-E580\Software2", "C:\SW")
     $validDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -in 2,3 }
     $existingPaths = @()
@@ -201,20 +215,20 @@ function Invoke-IT113-Menu {
         switch ($choice) {
             '1' { 
                 Clear-Host
-                Write-Host "🚀 Dang chay: Windows Deployment hoàn toàn trên RAM..." -ForegroundColor Green
-                # [Chèn code thực thi của nút 1 tại đây]
+                Write-Host "🚀 Dang chay: Windows Deployment hoan toan tren RAM..." -ForegroundColor Green
+                # [Nhét code file IT-113-1 cũ của anh vào đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '2' { 
                 Clear-Host
-                Write-Host "🚀 Dang chay: Fix Network & Update Firmware..." -ForegroundColor Green
-                # [Chèn code thực thi của nút 2 tại đây]
+                Write-Host "🚀 Dang chay: Fix Network & Update Firmware tren RAM..." -ForegroundColor Green
+                # [Nhét code file IT-113-2 cũ của anh vào đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '3' { 
                 Clear-Host
-                Write-Host "🚀 Dang chay: Tien ich SW2..." -ForegroundColor Green
-                # [Chèn code thực thi của nút 3 tại đây]
+                Write-Host "🚀 Dang chay: Tien ich SW2 tren RAM..." -ForegroundColor Green
+                # [Nhét code file IT-113-3 cũ của anh vào đây]
                 Read-Host "`nNhan Enter de quay lai Menu IT-113..."
             }
             '111' { return } 
@@ -223,10 +237,11 @@ function Invoke-IT113-Menu {
     }
 }
 
+# --- MENU 115 CHẠY TRÊN RAM ---
 function Invoke-IT115-Menu {
     Clear-Host
     Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
-    # [Chèn tác vụ của IT-115 vào đây]
+    # [Nhét code file IT-115 cũ của anh vào đây]
     Read-Host "`nNhan Enter de quay lai Menu chinh..."
     return
 }
@@ -299,7 +314,7 @@ function Show-Menu-IT {
         $i = 1; foreach ($c in $CPU) { Show-SubLine "CPU $i" $c.Name; $i++ }
     } else { Show-Line "CPU" $CPU.Name }
 
-    # RAM
+    # RAM Info
     $RAM = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
     $arrays = Get-CimInstance Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue
     $ramType = if ($arrays.MemoryErrorCorrection -in 5,6) { "ECC" } else { "Non-ECC" }
@@ -321,20 +336,20 @@ function Show-Menu-IT {
     $TotalSlots = if ($arrays) { @($arrays)[0].MemoryDevices } else { 2 }
     Show-SubLine "Used Slots" "$trueUsedSlots/$TotalSlots"
 
-    # Disk
+    # Disk Info
     $disks = Get-CimInstance Win32_DiskDrive
     $totalDisk = "{0:N0}" -f (($disks | Measure-Object Size -Sum).Sum / 1GB)
     Show-Line "Storage (Total)" "$totalDisk GB"
     $i = 1; foreach ($disk in $disks) { Show-SubLine "Disk $i" ("{0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
 
-    # Graphics
+    # GPU Info
     $vgaCount = 0; $gpuCount = 0
     foreach ($g in $GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
     foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
     Write-Host ""
     
-    # MAC
+    # MAC Info
     Show-Line "MAC Address" ""
     $netAdapters = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.MACAddress -and $_.PhysicalAdapter -eq $true }
     foreach ($adapter in $netAdapters) {
@@ -355,7 +370,7 @@ function Show-Menu-IT {
     Show-Line "Current User" $currentUser
     Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
     
-    # Báo cáo HTML đẩy lên Server LAN
+    # Gửi báo cáo HTML trực tiếp lên mạng mạng LAN Server
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join "`r`n"
@@ -374,7 +389,7 @@ function Show-Menu-IT {
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlContent)
             Write-Host "[ONLINE] OK -> Da cap nhat bao cao moi len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
-            Write-Host "[ONLINE] OK -> Folder mang dang chan quyen ghi báo cáo!" -ForegroundColor Red
+            Write-Host "[ONLINE] OK -> Folder mang dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
     } else {
         Write-Host "[OFFLINE] Khong thay Server mạng '$ServerHost'. Bo qua luu bao cao." -ForegroundColor DarkGray
@@ -388,13 +403,13 @@ function Show-Menu-IT {
     $topMenu = Read-Host
     switch ($topMenu) {
         "111" { return }           
-        "113" { Invoke-IT113-Menu } 
-        "115" { Invoke-IT115-Menu } 
+        "113" { Invoke-IT113-Menu } # Gọi thẳng hàm chứa core chạy trên RAM
+        "115" { Invoke-IT115-Menu } # Gọi thẳng hàm chứa core chạy trên RAM
         default { exit }            
     }
 }
 
-# Vòng lặp chính duy trì giao diện liên tục
+# Vòng lặp duy trì
 while ($true) { 
     Show-Menu-IT 
 }
