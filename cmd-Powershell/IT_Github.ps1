@@ -247,13 +247,13 @@ function Invoke-IT115-Menu {
 # =====================================================
 function Show-Menu-IT {
     Clear-Host
-    # Khởi tạo mảng lưu trữ CHỈ dành riêng cho nội dung cần xuất file HTML
+    # Mảng này CHỈ hứng thông tin từ [ PC Information ] đến Current User
     $script:ReportLines = New-Object System.Collections.Generic.List[string]
 
     $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
     $LineWidth = [Math]::Max(40, $ConsoleWidth - 1) 
 
-    # In phần header ra màn hình Console (Không đưa vào file HTML)
+    # In phần header ra Console (Hoàn toàn KHÔNG ghi vào file HTML)
     $BorderLine = "+" * $LineWidth
     Write-Host $BorderLine -ForegroundColor DarkGray
     $text = " IT support, Scripted by TACOMPUTER & GPT, 0933.848.990 "
@@ -265,7 +265,7 @@ function Show-Menu-IT {
     Write-Host ("+" * $right) -ForegroundColor DarkGray
     Write-Host $BorderLine -ForegroundColor DarkGray
 
-    # BẮT ĐẦU ĐƯA DỮ LIỆU VÀO HTML TỪ ĐÂY
+    # BẮT ĐẦU ĐOẠN LẤY DỮ LIỆU CHO HTML
     $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
     if ($IsLaptop) {
         Write-Host "[ Laptop Information ]" -ForegroundColor Cyan
@@ -278,7 +278,7 @@ function Show-Menu-IT {
     $global:LabelWidth = 20
     $global:SubLabelWidth = 18
 
-    # Hàm in Dòng cấp 1 (Có ghi vào HTML kèm thẻ màu)
+    # Hàm in dòng chính
     function Show-Line {
         param($label, $value)
         $fmtLabel = "{0,-$global:LabelWidth}" -f $label
@@ -287,7 +287,7 @@ function Show-Menu-IT {
         Write-Host $value -ForegroundColor Yellow
     }
 
-    # Hàm in Dòng cấp 2 (Có ghi vào HTML kèm thẻ màu)
+    # Hàm in dòng phụ
     function Show-SubLine {
         param($label, $value)
         $fmtSubLabel = "  {0,-$global:SubLabelWidth}" -f $label
@@ -377,11 +377,11 @@ function Show-Menu-IT {
     if (!$version) { $version = $RegOS.ReleaseId }
     Show-Line "Windows" "$($RegOS.ProductName) | $version | $($RegOS.CurrentBuild)"
     
-    # DÒNG CUỐI CÙNG ĐƯỢC PHÉP LƯU VÀO FILE HTML
+    # DÒNG CHUẨN CUỐI CÙNG ĐƯỢC CHẤP NHẬN CHO HTML
     Show-Line "Current User" $currentUser
     
     # =====================================================
-    # KHỞI TẠO VÀ ĐÓNG GÓI HTML NGAY TẠI ĐÂY (CHỈ ĐẾN CURRENT USER)
+    # ĐÓNG GÓI XUẤT FILE HTML NGAY (KHÔNG NHẬN THÊM DATA)
     # =====================================================
     $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber.Trim() } else { "UnknownSerial" }
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
@@ -419,6 +419,7 @@ function Show-Menu-IT {
             New-Item -Path $LocalReportsFolder -ItemType Directory -Force | Out-Null 
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
+        # Sử dụng Engine UTF8 gốc để tránh lỗi mã hóa ký tự tag của PowerShell
         [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
         Write-Host "[LOCAL] OK -> Da cap nhat bao cao CO MAU SAC tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
@@ -444,7 +445,7 @@ function Show-Menu-IT {
     }
 
     # =====================================================
-    # PHẦN THÔNG TIN ĐƯỜNG DẪN DƯỚI MENU (CHỈ IN TRÊN CONSOLE - KHÔNG VÀO FILE)
+    # PHẦN ĐƯỜNG DẪN DƯỚI MENU (CHỈ IN TRÊN CONSOLE - HTML KHÔNG LẤY)
     # =====================================================
     Write-Host $BorderLine -ForegroundColor DarkGray
     Write-Host ("{0,-$global:LabelWidth} >>> " -f "SOFTWARE Path") -NoNewline -ForegroundColor Green
