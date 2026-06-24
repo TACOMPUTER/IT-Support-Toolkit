@@ -1,24 +1,3 @@
-Anh bình tĩnh, em vừa soi kỹ lại rồi! Đúng là em có một chút sơ sót trong lúc sửa hàm `Show-Line` và `Show-SubLine`.
-
-Lỗi `Index (zero based) must be greater than or equal to zero...` thực chất **không phải nằm ở dữ liệu phần cứng**, mà nó nằm ở chính cấu trúc tiêu đề HTML anh mới đổi sang dùng lớp CSS `<body><pre>$Content</pre></body>`.
-
-Trong PowerShell, khi anh dùng chuỗi Here-String định dạng ngoặc kép `@" ... "@`, PowerShell sẽ tự động đi tìm tất cả các ký tự có cấu trúc `{chữ_hoặc_số}` để map biến. Đoạn code CSS của anh có đoạn:
-
-```css
-body { font-family: 'Consolas'... }
-pre { font-size: 14px; ... }
-
-```
-
-Cặp ngoặc nhọn `{ ... }` của CSS nằm trong chuỗi `@" ... "@` đã làm cho PowerShell hiểu nhầm đó là cú pháp định dạng chuỗi (`-f`) hoặc Token của script, dẫn tới việc nó báo lỗi Index văng ra ngoài màn hình và chặn đứng tiến trình.
-
-**Cách sửa tận gốc:** Em đổi chuỗi `$HtmlContent` sang Here-String dấu nháy đơn `@' ... '@` để đóng băng hoàn toàn nội dung CSS, không cho PowerShell quét trúng ký tự ngoặc nhọn `{}` nữa. Riêng các biến động như `$Serial` và `$Content` thì mình gộp chuỗi riêng vào sau.
-
-Đồng thời, em trả 2 hàm `Show-Line` và `Show-SubLine` về lại cấu trúc gốc ban đầu chạy cực mượt của anh.
-
-Anh copy toàn bộ bản chuẩn 100% này nhé:
-
-```powershell
 param(
     [int]$PSWidth = 80,
     [int]$PSHeight = 55,
@@ -483,5 +462,3 @@ pre { font-size: 14px; white-space: pre-wrap; margin: 0; }
 while ($true) { 
     Show-Menu-IT 
 }
-
-```
