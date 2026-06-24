@@ -159,7 +159,7 @@ if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
 }
 
 $SystemDriveSW         = "C:\SW"
-$ExePath               = Join-Path $ITScriptRoot "IT_Github.exe"
+$ExePath               = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
 $SystemDriveSWlnk      = "$SystemDriveSW\IT_Github.exe.lnk"
 $currentUser           = "$env:COMPUTERNAME\$env:USERNAME"
 $StartMenuProgramsPath = [Environment]::GetFolderPath("Programs")
@@ -185,12 +185,16 @@ foreach ($var in $vars) {
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 $lines | Set-Content $exportvariablePath
 
-# Tạo Shortcut
-$WshShell = New-Object -ComObject WScript.Shell
-$ShortcutSystemDrive = $WshShell.CreateShortcut($SystemDriveSWlnk)
-$ShortcutSystemDrive.TargetPath = $ExePath
-$ShortcutSystemDrive.WorkingDirectory = $ITScriptRoot
-$ShortcutSystemDrive.Save()
+# Kiểm tra nếu file EXE gốc tồn tại thì tiến hành copy đè vào C:\SW
+$DestExePath = Join-Path $SystemDriveSW "IT_Github.exe"
+
+if (Test-Path $ExePath) {
+    # Copy đè file .exe vào C:\SW (-Force để luôn cập nhật bản mới nhất nếu có)
+    Copy-Item -Path $ExePath -Destination $DestExePath -Force | Out-Null
+    Write-Host "[SYSTEM] Da sao chep IT_Github.exe vao $SystemDriveSW" -ForegroundColor Green
+} else {
+    Write-Host "[WARNING] Khong tim thay file nguon: $ExePath" -ForegroundColor Yellow
+}
 
 if (Test-Path $ExpandedStartMenuLnk) { Remove-Item $ExpandedStartMenuLnk -Force }
 $ShortcutStartMenu = $WshShell.CreateShortcut($ExpandedStartMenuLnk)
