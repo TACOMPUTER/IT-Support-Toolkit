@@ -287,24 +287,24 @@ function Show-Menu-IT {
         $partNumber = if ($ram.PartNumber) { $ram.PartNumber.Trim() } else { "Unknown" }
         
         # Định dạng gọn gàng từng cột bằng dấu | cách đều
-        $RamDetails = "-> $size GB  $($ram.Speed) MHz  |  $manufacturer  |  $partNumber"
+        $RamDetails = "$size GB  $($ram.Speed) MHz  |  $manufacturer  |  $partNumber"
         Show-SubLine $slot $RamDetails
         $i++; $trueUsedSlots++
     }
     $TotalSlots = if ($arrays) { @($arrays)[0].MemoryDevices } else { 2 }
-    Show-SubLine "Used Slots" "-> $trueUsedSlots/$TotalSlots"
+    Show-SubLine "Used Slots" "$trueUsedSlots/$TotalSlots"
 
     # --- PHẦN Ổ CỨNG ---
     $disks = Get-CimInstance Win32_DiskDrive
     $totalDisk = "{0:N0}" -f (($disks | Measure-Object Size -Sum).Sum / 1GB)
     Show-Line "Storage (Total)" "$totalDisk GB"
-    $i = 1; foreach ($disk in $disks) { Show-SubLine "Disk $i" ("-> {0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
+    $i = 1; foreach ($disk in $disks) { Show-SubLine "Disk $i" ("{0} | {1:N0} GB" -f $disk.Model, ($disk.Size / 1GB)); $i++ }
 
     # --- PHẦN ĐỒ HỌA ---
     $vgaCount = 0; $gpuCount = 0
     foreach ($g in $GPU) { if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ } }
     Show-Line "Graphics" ("$vgaCount VGA / $gpuCount GPU")
-    foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("-> " + $g.Name) }
+    foreach ($g in $GPU) { Show-SubLine "GPU_Info" ("" + $g.Name) }
     Write-Host ""
     
     # --- PHẦN MAC ADDRESS (PHÂN LOẠI CHI TIẾT LAN/WIFI/BLUETOOTH + CĂN THẲNG HÀNG) ---
