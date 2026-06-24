@@ -161,34 +161,34 @@ if (Test-Path $ExeSourcePath) {
 }
 
 # =====================================================
-# TỰ ĐỘNG TẠO SHORTCUT VÀO START MENU
+# TẠO SHORTCUT START MENU (BỔ SUNG)
 # =====================================================
 try {
-    $ShortcutName = "IT_Github.exe.lnk"
-    $ProgramsPath = [System.IO.Path]::Combine($env:APPDATA, "Microsoft\Windows\Start Menu\Programs")
-    $ShortcutPath = [System.IO.Path]::Combine($ProgramsPath, $ShortcutName)
-
-    # Chỉ tạo nếu file .exe đích đã tồn tại (đảm bảo đã chép vào C:\SW)
+    # Đường dẫn thư mục Start Menu Programs
+    $ProgramsPath = [System.IO.Path]::Combine([Environment]::GetFolderPath("Programs"), "IT_Github.lnk")
+    
+    # Chỉ tạo nếu file .exe đã có sẵn trong C:\SW
     if (Test-Path $DestExePath) {
         $WshShell = New-Object -ComObject WScript.Shell
         
-        # Tạo shortcut nếu chưa có
-        if (-not (Test-Path $ShortcutPath)) {
-            $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
-            $Shortcut.TargetPath = $DestExePath
-            $Shortcut.WorkingDirectory = $SystemDriveSW
-            $Shortcut.Description = "IT Github by TACOMPUTER"
-            $Shortcut.Save()
-            
-            # Ép Windows cập nhật icon ngay lập tức
-            $Shell = New-Object -ComObject Shell.Application
-            $Shell.NameSpace($ProgramsPath).ParseName($ShortcutName).InvokeVerb("Properties") | Out-Null
-            
-            Write-Host "[SYSTEM] Đã tạo Shortcut tại Start Menu!" -ForegroundColor Green
-        }
+        # Xóa shortcut cũ nếu có để cập nhật
+        if (Test-Path $ProgramsPath) { Remove-Item $ProgramsPath -Force }
+        
+        $Shortcut = $WshShell.CreateShortcut($ProgramsPath)
+        $Shortcut.TargetPath = $DestExePath
+        $Shortcut.WorkingDirectory = $SystemDriveSW
+        $Shortcut.Description = "IT Github by TACOMPUTER"
+        $Shortcut.IconLocation = $DestExePath # Dùng icon của file exe
+        $Shortcut.Save()
+        
+        # Ép Windows làm mới giao diện Start Menu để thấy Shortcut ngay lập tức
+        $Shell = New-Object -ComObject Shell.Application
+        $Shell.NameSpace((Split-Path $ProgramsPath)).ParseName((Split-Path $ProgramsPath -Leaf)).InvokeVerb("Properties") | Out-Null
+        
+        Write-Host "[SYSTEM] Đã tạo Shortcut tại Start Menu thành công!" -ForegroundColor Green
     }
 } catch {
-    # Không hiện lỗi gây nhiễu nếu không tạo được
+    Write-Host "[WARNING] Không thể tạo shortcut: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
 # =====================================================
