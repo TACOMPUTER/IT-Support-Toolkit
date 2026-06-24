@@ -421,7 +421,6 @@ function Show-Menu-IT {
         }
         $LocalFile = Join-Path $LocalReportsFolder $FileNameReport
         [System.IO.File]::WriteAllText($LocalFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
-        Write-Host "[LOCAL] OK -> Da cap nhat bao cao CO MAU SAC tai local $LocalReportsFolder" -ForegroundColor Green
     } catch {
         Write-Host "[LOCAL] ERROR -> Khong the ghi file bao cao vao o C!" -ForegroundColor Red
     }
@@ -436,7 +435,6 @@ function Show-Menu-IT {
             }
             $NetworkFile = Join-Path $NetworkFolder $FileNameReport
             [System.IO.File]::WriteAllText($NetworkFile, $HtmlTemplate, [System.Text.Encoding]::UTF8)
-            Write-Host "[ONLINE] OK -> Da cap nhat bao cao mau len Server ($ServerHost)" -ForegroundColor Cyan
         } catch {
             Write-Host "[ONLINE] OK -> Nhung folder mang mang LAN dang chan quyen ghi bao cao!" -ForegroundColor Red
         }
