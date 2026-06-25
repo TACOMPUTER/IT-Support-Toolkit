@@ -223,10 +223,19 @@ function Invoke-IT113-Menu {
     $UrlTo113 = "$BaseGithubUrl/IT/IT-113/IT-113-1.ps1"
 
     while ($true) {
-        
+        Clear-Host
         $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
         $LineWidth = [Math]::Max(40, $ConsoleWidth - 1)
 
+        Write-Host "<<< Danh sách 'Windows Security\Exclusions' hiện tại >>>" -ForegroundColor Cyan
+
+        $preferences = Get-MpPreference
+
+        $paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
+
+        $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+        Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
+        
         # Thông tin Debug
         Write-Host "DEBUG: ScriptDir: $ScriptDir" -ForegroundColor DarkGray
         Write-Host "DEBUG: PathTo113: $PathTo113" -ForegroundColor DarkGray
