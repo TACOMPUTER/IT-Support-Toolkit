@@ -238,7 +238,7 @@ function Invoke-IT113-Menu {
         
         # Thông tin Debug
         Write-Host "DEBUG: ScriptDir: $ScriptDir" -ForegroundColor DarkGray
-        Write-Host "DEBUG: PathTo113: $PathTo113" -ForegroundColor DarkGray
+        Write-Host "DEBUG: UrlTo113: $UrlTo113" -ForegroundColor DarkGray
         Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
 
         Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
@@ -253,20 +253,8 @@ function Invoke-IT113-Menu {
         switch ($choice) {
             '1' { 
                 Clear-Host
-                Write-Host "🚀 Đang tải Menu 113-1 từ GitHub..." -ForegroundColor Green
-                
-                try {
-                    # Tải nội dung script từ Web về và chạy trong RAM
-                    $ScriptContent = Invoke-RestMethod -Uri $UrlTo113 -Headers @{ "Cache-Control" = "no-cache" }
-                    Invoke-Expression $ScriptContent
-                    
-                    # Gọi hàm menu vừa được nạp vào bộ nhớ RAM
-                    Show-Menu-IT-113-1
-                } catch {
-                    Write-Host "LỖI: Không thể tải script từ GitHub!" -ForegroundColor Red
-                    Write-Host $_.Exception.Message -ForegroundColor DarkGray
-                    Start-Sleep -Seconds 3
-                }
+                $ScriptContent = Invoke-RestMethod -Uri $UrlTo113 -Headers @{ "Cache-Control" = "no-cache" }
+                Invoke-Expression $ScriptContent
             }
             '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
             '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
