@@ -194,7 +194,7 @@ Write-Host "Path: $ShortcutStartMenuPath" -ForegroundColor DarkGray
 
 
 # --- MENU CẤP 3: IT-113-1-1 ---
-function Show-IT113-1-1 {
+function Show_IT113_1_1 {
     $subSubChoice = ""
     while ($subSubChoice -ne "0") {
         Clear-Host
@@ -210,8 +210,8 @@ function Show-IT113-1-1 {
     	Write-Host "8. Power, Network, Volume" -ForegroundColor Magenta
         Write-Host "0. Quay lại Menu Deployment (IT-113-1)" -ForegroundColor DarkGray
         Write-Host ""
-        $IT113-1-1_Choice = Read-Host "Vui lòng nhập số"
-        switch ($IT113-1-1_Choice) {
+        $IT113_1_1_Choice = Read-Host "Vui lòng nhập số"
+        switch ($IT113_1_1_Choice) {
             '1' { Write-Host "Đang chạy 1..." -ForegroundColor Green; Start-Sleep 1 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
@@ -220,7 +220,7 @@ function Show-IT113-1-1 {
 }
 
 # --- MENU CẤP 2: IT-113-1 ---
-function Show-IT113-1 {
+function Show_IT113_1 {
     $subChoice = ""
     while ($subChoice -ne "0") {
         Clear-Host
@@ -245,9 +245,9 @@ function Show-IT113-1 {
     	Write-Host "5. Máy thực tế: Triển khai lên máy thực tế cấp cho người dùng" -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu IT-113" -ForegroundColor DarkGray
         Write-Host ""
-        $IT113-1_Choice = Read-Host "Vui lòng nhập số"
-        switch ($IT113-1_Choice) {
-            '1' { Show-IT113-1-1 }
+        $IT113_1_Choice = Read-Host "Vui lòng nhập số"
+        switch ($IT113_1_Choice) {
+            '1' { Show_IT113_1_1 }
             '2' { Write-Host "Đang xử lý..." -ForegroundColor Green; Start-Sleep 1 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
@@ -256,7 +256,7 @@ function Show-IT113-1 {
 }
 
 # --- MENU CẤP 1: IT-113 ---
-function Show-IT113 {
+function Show_IT113 {
     # Thực hiện các thiết lập cần thiết (ExclusionPath)
     # ... (Giữ nguyên logic của bạn ở đây) ...
 
@@ -272,9 +272,9 @@ function Show-IT113 {
         Write-Host ""
         $IT113_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_Choice) {
-            '1' { Show-IT113-1 }
-            '2' { Show-IT113-2 }
-            '3' { Show-IT113-3 }
+            '1' { Show_IT113_1 }
+            '2' { Show_IT113-2 }
+            '3' { Show_IT113-3 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
         }
@@ -505,7 +505,7 @@ function Show-Menu-IT {
 
         "111" { Restart-ITGithub }
     
-        "113" { Show-IT113 }
+        "113" { Show_IT113 }
     
         "115" { Show-IT115 }
     
