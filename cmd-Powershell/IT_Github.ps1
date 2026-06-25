@@ -238,8 +238,13 @@ function Invoke-IT113-Menu {
         switch ($choice) {
             '1' { 
                 Clear-Host
-                Write-Host "🚀 Đang chạy: Windows Deployment hoàn toàn trên RAM..." -ForegroundColor Green
-                Read-Host "`nNhấn Enter để quay lại Menu IT-113..."
+                Write-Host "🚀 Đang tải Menu 113-1..." -ForegroundColor Green
+                
+                # Cách 1: Nếu đã có hàm Run-IT-xxx trong môi trường
+                Run-IT-xxx "$IT113Script\IT-113-1.ps1"
+                
+                # Cách 2: Nếu chưa có hàm Run-IT-xxx, dùng lệnh trực tiếp
+                # . "$IT113Script\IT-113-1.ps1"
             }
             '2' { 
                 Clear-Host
