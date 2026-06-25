@@ -252,9 +252,31 @@ function Invoke-IT113-Menu {
         
         switch ($choice) {
             '1' { 
-                Clear-Host
-                $ScriptContent = Invoke-RestMethod -Uri $UrlTo113 -Headers @{ "Cache-Control" = "no-cache" }
-                Invoke-Expression $ScriptContent
+                # Mở menu con thay vì gọi file external
+                $subChoice = ""
+                while ($subChoice -ne "99") {
+                    Clear-Host
+                    Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) ===" -ForegroundColor Cyan
+                    Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
+                    Write-Host "2. MS Office và các phần mềm cơ bản" -ForegroundColor Magenta
+                    Write-Host "3. Phần mềm SW2: Patched - CAD2007 - LT2018 - SKU2021" -ForegroundColor Yellow
+                    Write-Host "4. Update các máy Deployment" -ForegroundColor Magenta
+                    Write-Host "5. Máy thực tế: Triển khai lên máy thực tế" -ForegroundColor Yellow
+                    Write-Host "99. Quay lại Menu trước" -ForegroundColor Gray
+                    Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
+                    
+                    $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 99)"
+                    
+                    switch ($subChoice) {
+                        '1' { Write-Host "Đang xử lý: Vừa cài đặt Windows..." -ForegroundColor Green; Start-Sleep 1 }
+                        '2' { Write-Host "Đang xử lý: MS Office & Cơ bản..." -ForegroundColor Green; Start-Sleep 1 }
+                        '3' { Write-Host "Đang xử lý: SW2 & Patched..." -ForegroundColor Green; Start-Sleep 1 }
+                        '4' { Write-Host "Đang xử lý: Update Deployment..." -ForegroundColor Green; Start-Sleep 1 }
+                        '5' { Write-Host "Đang xử lý: Triển khai máy thực tế..." -ForegroundColor Green; Start-Sleep 1 }
+                        '99' { break }
+                        default { Write-Host "Lựa chọn không hợp lệ!" -ForegroundColor Red; Start-Sleep 1 }
+                    }
+                }
             }
             '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
             '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
