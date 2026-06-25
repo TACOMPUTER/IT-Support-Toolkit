@@ -241,23 +241,20 @@ function Invoke-IT113-Menu {
         
         $choice = Read-Host "Vui lòng nhập số (1-3 hoặc 111)"
         switch ($choice) {
-            switch ($choice) {
-                '1' { 
-                    Clear-Host
-                    Write-Host "🚀 Đang tải Menu 113-1..." -ForegroundColor Green
-                    
-                    # Đường dẫn trỏ từ IT_Github.ps1 tới IT-113-1.ps1
-                    $PathTo113 = Join-Path $PSScriptRoot "IT\IT-113\IT-113-1.ps1"
-                    
-                    if (Test-Path $PathTo113) {
-                        . $PathTo113        # Nạp script vào bộ nhớ
-                        Show-Menu-IT-113-1  # Gọi hàm menu vừa được nạp
-                    } else {
-                        Write-Host "LỖI: Không tìm thấy file tại $PathTo113" -ForegroundColor Red
-                        Start-Sleep -Seconds 2
-                    }
+            '1' { 
+                Clear-Host
+                Write-Host "🚀 Đang tải Menu 113-1..." -ForegroundColor Green
+                
+                # Đường dẫn trỏ từ IT_Github.ps1 tới IT-113-1.ps1
+                $PathTo113 = Join-Path $PSScriptRoot "IT\IT-113\IT-113-1.ps1"
+                
+                if (Test-Path $PathTo113) {
+                    . $PathTo113        # Nạp script vào bộ nhớ
+                    Show-Menu-IT-113-1  # Gọi hàm menu vừa được nạp
+                } else {
+                    Write-Host "LỖI: Không tìm thấy file tại $PathTo113" -ForegroundColor Red
+                    Start-Sleep -Seconds 2
                 }
-                # ... các case khác
             }
             '2' { 
                 Clear-Host
