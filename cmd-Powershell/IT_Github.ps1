@@ -216,92 +216,52 @@ function Invoke-IT113-Menu {
         }
     }
     
-    while ($true) {
-        Clear-Host
-        $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
-        $LineWidth = [Math]::Max(40, $ConsoleWidth - 1)
-
-        Write-Host "<<< Danh sách 'Windows Security\Exclusions' hiện tại >>>" -ForegroundColor Cyan
-
-        $preferences = Get-MpPreference
-
-        $paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
-
-        $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
-        Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
-        
-        # Thông tin Debug
-        Write-Host "Vị trí chạy Script: $ScriptDir" -ForegroundColor DarkGray        
-        Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
-
-        Write-Host "=== KHU VỰC IT-113 (RAM MODE) ===" -ForegroundColor Cyan
-        Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
-        Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
-        Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
-        Write-Host "0. Quay lại Menu chính" -ForegroundColor Gray
-        Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
-        
-        $choice = Read-Host "Vui lòng nhập số (1-3)"
-        
-        switch ($choice) {
-            '1' { 
-                # Mở menu con thay vì gọi file external
-                $subChoice = ""
-                while ($subChoice -ne "0") {
-                    Clear-Host
-                    Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
-                    Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
-                    Write-Host "2. MS Office và các phần mềm cơ bản" -ForegroundColor Magenta
-                    Write-Host "3. Phần mềm SW2: Patched - CAD2007 - LT2018 - SKU2021" -ForegroundColor Yellow
-                    Write-Host "4. Update các máy Deployment" -ForegroundColor Magenta
-                    Write-Host "5. Máy thực tế: Triển khai lên máy thực tế" -ForegroundColor Yellow
-                    Write-Host "0. Quay lại Menu trước" -ForegroundColor Gray
-                    Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
-                    
-                    $subChoice = Read-Host "Nhập lựa chọn (1-5)"
-                    
-                    switch ($subChoice) {
-                        '1' { 
-                            $subSubChoice = ""
-                            while ($subSubChoice -ne "0") {
-                                Clear-Host
-                                Write-Host "=== CÀI ĐẶT WINDOWS (LOCAL MANAGER) ===" -ForegroundColor Cyan
-                                Write-Host "1. Account Local Manager - Add 'Guest', Move Users, OneDrive" -ForegroundColor Yellow
-                                Write-Host "2. Windows Firewall Control" -ForegroundColor Magenta
-                                Write-Host "3. Check Activation status" -ForegroundColor Yellow
-                                Write-Host "4. Change Account Picture & Lock Screen" -ForegroundColor Magenta
-                                Write-Host "5. Windows update - Microphone & Location" -ForegroundColor Yellow
-                                Write-Host "6. Clipboard History, System Properties, Hosts" -ForegroundColor Magenta
-                                Write-Host "7. BIOS, Firmware, Drivers update" -ForegroundColor Yellow
-                                Write-Host "8. Power, Network, Volume" -ForegroundColor Magenta
-                                Write-Host "0. Quay lại Menu Deployment" -ForegroundColor Gray
-                                Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
-                                
-                                $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
-                                
-                                switch ($subSubChoice) {
-                                    '1' { Write-Host "Đang chạy: Account Local Manager..." -ForegroundColor Green; Start-Sleep 1 }
-                                    '2' { Write-Host "Đang chạy: Firewall Control..." -ForegroundColor Green; Start-Sleep 1 }
-                                    '3' { Write-Host "Đang chạy: Activation Status..." -ForegroundColor Green; Start-Sleep 1 }
-                                    # ... tiếp tục cho đến case '8'
-                                    '0' { break }
-                                    default { Write-Host "Lựa chọn không hợp lệ!" -ForegroundColor Red; Start-Sleep 1 }
-                                }
-                            }
-                        }
-                        '2' { Write-Host "Đang xử lý: MS Office & Cơ bản..." -ForegroundColor Green; Start-Sleep 1 }
-                        '3' { Write-Host "Đang xử lý: SW2 & Patched..." -ForegroundColor Green; Start-Sleep 1 }
-                        '4' { Write-Host "Đang xử lý: Update Deployment..." -ForegroundColor Green; Start-Sleep 1 }
-                        '5' { Write-Host "Đang xử lý: Triển khai máy thực tế..." -ForegroundColor Green; Start-Sleep 1 }
-                        '0' { break }
-                        default { Write-Host "Lựa chọn không hợp lệ!" -ForegroundColor Red; Start-Sleep 1 }
-                    }
-                }
+    # --- Hàm Menu Cài đặt Windows (IT-113-1-1) ---
+    function Show-SubSubMenu-WindowsSetup {
+        $subSubChoice = ""
+        while ($subSubChoice -ne "0") {
+            Clear-Host
+            Write-Host "=== CÀI ĐẶT WINDOWS (LOCAL MANAGER) IT-113-1-1 ===" -ForegroundColor Cyan
+            # ... In menu 1-8 ...
+            $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
+            
+            switch ($subSubChoice) {
+                '1' { Write-Host "Đang chạy 1..." -ForegroundColor Green; Start-Sleep 1 }
+                # ... các case khác ...
+                '0' { return }
+                default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
             }
+        }
+    }
+    
+    # --- Hàm Menu Deployment (IT-113-1) ---
+    function Show-Deployment-Menu {
+        $subChoice = ""
+        while ($subChoice -ne "0") {
+            Clear-Host
+            Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
+            Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
+            # ... In menu 2-5 ...
+            $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 0)"
+            
+            switch ($subChoice) {
+                '1' { Show-SubSubMenu-WindowsSetup } # Gọi hàm con
+                '2' { Write-Host "Đang xử lý 2..." -ForegroundColor Green; Start-Sleep 1 }
+                '0' { return }
+                default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
+            }
+        }
+    }
+    
+    # --- Vòng lặp Menu chính ---
+    while ($true) {
+        # ... In Menu chính (1-3) ...
+        $choice = Read-Host "Vui lòng nhập số (1-3)"
+        switch ($choice) {
+            '1' { Show-Deployment-Menu } # Gọi hàm Deployment
             '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
             '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
-            '0' { return } 
-            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
+            '0' { return }
         }
     }
 }
