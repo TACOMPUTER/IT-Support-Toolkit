@@ -139,14 +139,23 @@ $BaseGithubUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolki
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
 # 1. Lưu/Đồng bộ file IT_Github-call.ps1 vào C:\SW
-if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
-    try {
-        $CurrentCode = Get-Content -Path $MyInvocation.MyCommand.Path -Raw -ErrorAction SilentlyContinue
-        if (-not $CurrentCode) {
-            $CurrentCode = Invoke-RestMethod -Uri $ScriptWebUrl -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
+# 1. Tự động đồng bộ với GitHub trước khi chạy tiếp
+try {
+    Write-Host "[SYSTEM] Đang kiểm tra cập nhật từ GitHub..." -ForegroundColor DarkGray
+    # Tải nội dung mới từ GitHub với tham số ngẫu nhiên để tránh Cache
+    $NewCode = Invoke-RestMethod -Uri "$ScriptWebUrl?t=$(Get-Date -UFormat %s)" -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction SilentlyContinue
+    
+    if ($NewCode) {
+        # Ghi đè file local bằng nội dung mới nhất
+        [System.IO.File]::WriteAllText($LocalScriptPath, $NewCode, [System.Text.Encoding]::UTF8)
+        
+        # Nếu đang chạy từ C:\SW thì chạy tiếp phiên bản mới vừa tải về
+        if ($MyInvocation.MyCommand.Path -eq $LocalScriptPath) {
+            # Tiếp tục thực thi code mới (không thoát)
         }
-        if ($CurrentCode) { [System.IO.File]::WriteAllText($LocalScriptPath, $CurrentCode, [System.Text.Encoding]::UTF8) }
-    } catch {}
+    }
+} catch {
+    Write-Host "[SYSTEM] Không thể cập nhật từ GitHub, chạy bản local hiện tại." -ForegroundColor Yellow
 }
 
 # 2. Sao chép file IT_Github.exe vào C:\SW
