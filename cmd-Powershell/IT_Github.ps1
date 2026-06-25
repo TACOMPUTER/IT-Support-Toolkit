@@ -227,10 +227,11 @@ function Invoke-IT113-Menu {
         $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
 
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
-        Write-Host "PSScriptRoot $PSScriptRoot"
-        Write-Host "PathTo113 $PathTo113"
-        
+        Write-Host "DEBUG Path Info:" -ForegroundColor Cyan
+        Write-Host "PSScriptRoot: $PSScriptRoot" -ForegroundColor Yellow
+        Write-Host "PathTo113   : $PathTo113" -ForegroundColor Yellow
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+        
         Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
         Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
         Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
