@@ -513,16 +513,18 @@ function Show-Menu-IT {
     $topMenu = Read-Host
     switch ($topMenu) {
         "111" { 
-            Write-Host "`n→ Đang cập nhật và reload lại script từ GitHub..." -ForegroundColor Cyan
+            Write-Host "`n→ Đang khởi động lại hệ thống..." -ForegroundColor Cyan
             
-            # 1. Tải lại nội dung mới nhất từ GitHub
-            $NewCode = Invoke-RestMethod -Uri "$ScriptWebUrl?t=$(Get-Date -UFormat %s)" -Headers @{ "Cache-Control" = "no-cache" }
+            # 1. Tìm đường dẫn file .exe đang chạy
+            $ExePath = (Get-Process -Id $PID).Path # Hoặc trỏ cứng đến vị trí file nếu biết rõ
             
-            # 2. Ghi đè vào file local
-            [System.IO.File]::WriteAllText($LocalScriptPath, $NewCode, [System.Text.Encoding]::UTF8)
+            # 2. Khởi động lại file .exe từ ổ mạng
+            # Dùng Start-Process để chạy .exe độc lập với tiến trình PowerShell hiện tại
+            if (Test-Path $ExeSourcePath) {
+                Start-Process -FilePath $ExeSourcePath
+            }
             
-            # 3. Chạy file mới vừa tải về và thoát file cũ
-            Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`""
+            # 3. Thoát tiến trình hiện tại
             exit 
         }
         "113" { Invoke-IT113-Menu } 
