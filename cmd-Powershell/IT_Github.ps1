@@ -476,7 +476,9 @@ function Show-Menu-IT {
     Write-Host $BorderLine -ForegroundColor DarkGray
     Write-Host ("{0,-$global:LabelWidth} >>> " -f "IT_Github.exe & IT_Github-call.ps1 Path") -NoNewline -ForegroundColor Green
     Write-Host $SourceSW -ForegroundColor Yellow
-    
+    Write-Host $BorderLine -ForegroundColor DarkGray
+
+    Write-Host ""
     Write-Host "User vui lòng nhập số 115 để được hỗ trợ: " -NoNewline
     $topMenu = Read-Host
     switch ($topMenu) {
