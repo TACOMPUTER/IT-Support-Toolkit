@@ -127,6 +127,9 @@ $currentUser = "$env:COMPUTERNAME\$env:USERNAME"
 # IT_Github.exe nằm ngay trong thư mục chứa file script (theo như bạn nói)
 $ExeSourcePath = Join-Path $ScriptDir "IT_Github.exe"
 
+# Định nghĩa Base URL (phần chung của tất cả các file)
+$BaseGithubUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/refs/heads/main/cmd-Powershell"
+
 # =====================================================
 
 
@@ -215,11 +218,8 @@ function Invoke-IT113-Menu {
             try { Add-MpPreference -ExclusionPath $path -ErrorAction SilentlyContinue } catch {}
         }
     }
-
-    # 1. Định nghĩa Base URL (phần chung của tất cả các file)
-    $BaseGithubUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell"
     
-    # 2. Định nghĩa đường dẫn file con dựa trên cấu trúc GitHub
+    # Định nghĩa đường dẫn file con dựa trên cấu trúc GitHub
     $UrlTo113 = "$BaseGithubUrl/IT/IT-113/IT-113-1.ps1"
 
     while ($true) {
