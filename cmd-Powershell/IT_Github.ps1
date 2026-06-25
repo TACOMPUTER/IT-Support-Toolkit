@@ -225,6 +225,10 @@ function Invoke-IT113-Menu {
         $preferences = Get-MpPreference
         $paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
         $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+
+        Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
+        Write-Host "PSScriptRoot $PSScriptRoot"
+        Write-Host "PathTo113 $PathTo113"
         
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
         Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
