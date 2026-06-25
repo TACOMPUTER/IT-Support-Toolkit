@@ -80,16 +80,22 @@ function Show-Menu-IT {
     Write-Host "0. Thoát" -ForegroundColor Gray
     
     $choice = Read-Host "`nNhập lựa chọn"
+    # --- TRONG HÀM Show-Menu-IT ---
+    $choice = Read-Host "`nNhập lựa chọn"
     switch ($choice) {
-        '1' { Show-Deployment-Menu }
+        '1'   { Show-Deployment-Menu }    # Đây chính là menu 113 của bạn
+        '113' { Show-Deployment-Menu }    # Thêm cả trường hợp nhập thẳng 113
+        '115' { Invoke-IT115-Menu }       # Menu 115
+        '2'   { Write-Host "Đang chạy Network..." -ForegroundColor Green; Start-Sleep 1 }
+        '3'   { Write-Host "Đang chạy SW2..." -ForegroundColor Green; Start-Sleep 1 }
         '111' { 
             Write-Host "Đang khởi động lại..." -ForegroundColor Cyan
-            # Lấy đường dẫn exe cha để khởi động lại
             $parent = Get-CimInstance Win32_Process -Filter "ProcessId = $PID" | Get-CimAssociatedInstance -Association Win32_ProcessParent
             if ($parent.ExecutablePath) { Start-Process -FilePath $parent.ExecutablePath }
             exit 
         }
         '0' { exit }
+        default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
     }
 }
 
