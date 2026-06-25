@@ -209,9 +209,9 @@ function Show-IT113-1-1 {
     	Write-Host "7. BIOS, Firmware, Drivers update" -ForegroundColor Yellow
     	Write-Host "8. Power, Network, Volume" -ForegroundColor Magenta
         Write-Host "0. Quay lại Menu Deployment (IT-113-1)" -ForegroundColor DarkGray
-        
-        $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
-        switch ($subSubChoice) {
+        Write-Host ""
+        $IT113-1-1_Choice = Read-Host "Vui lòng nhập số"
+        switch ($IT113-1-1_Choice) {
             '1' { Write-Host "Đang chạy 1..." -ForegroundColor Green; Start-Sleep 1 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
@@ -244,9 +244,9 @@ function Show-IT113-1 {
     	Write-Host "4. Update các máy Deployment" -ForegroundColor Magenta
     	Write-Host "5. Máy thực tế: Triển khai lên máy thực tế cấp cho người dùng" -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu IT-113" -ForegroundColor DarkGray
-        
-        $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 0)"
-        switch ($subChoice) {
+        Write-Host ""
+        $IT113-1_Choice = Read-Host "Vui lòng nhập số"
+        switch ($IT113-1_Choice) {
             '1' { Show-IT113-1-1 }
             '2' { Write-Host "Đang xử lý..." -ForegroundColor Green; Start-Sleep 1 }
             '0' { return }
@@ -269,9 +269,9 @@ function Show-IT113 {
         Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
         Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu chính" -ForegroundColor DarkGray
-        
-        $choice = Read-Host "Vui lòng nhập số"
-        switch ($choice) {
+        Write-Host ""
+        $IT113_Choice = Read-Host "Vui lòng nhập số"
+        switch ($IT113_Choice) {
             '1' { Show-IT113-1 }
             '2' { Show-IT113-2 }
             '3' { Show-IT113-3 }
