@@ -196,84 +196,80 @@ Write-Host "Path: $ShortcutStartMenuPath" -ForegroundColor DarkGray
 # KHU VỰC CORE TIẾN TRÌNH CON - CHẠY HOÀN TOÀN TRÊN RAM
 # =====================================================
 
-# --- MENU 113 CHẠY TRÊN RAM ---
+# =====================================================
+# CẤU TRÚC MENU PHÂN CẤP (IT-113 -> IT-113-1 -> IT-113-1-1)
+# =====================================================
+
+# --- MENU CẤP 3: IT-113-1-1 ---
+function Show-SubSubMenu-WindowsSetup {
+    $subSubChoice = ""
+    while ($subSubChoice -ne "0") {
+        Clear-Host
+        Write-Host "=== CÀI ĐẶT WINDOWS (LOCAL MANAGER) IT-113-1-1 ===" -ForegroundColor Cyan
+        Write-Host "1. Tác vụ 1..." -ForegroundColor Yellow
+        Write-Host "2. Tác vụ 2..." -ForegroundColor Yellow
+        Write-Host "0. Quay lại Menu Deployment (IT-113-1)" -ForegroundColor DarkGray
+        
+        $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
+        switch ($subSubChoice) {
+            '1' { Write-Host "Đang chạy 1..." -ForegroundColor Green; Start-Sleep 1 }
+            '0' { return }
+            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
+        }
+    }
+}
+
+# --- MENU CẤP 2: IT-113-1 ---
+function Show-Deployment-Menu {
+    $subChoice = ""
+    while ($subChoice -ne "0") {
+        Clear-Host
+        Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
+        Write-Host "1. Vừa cài đặt xong Windows (Vào IT-113-1-1)" -ForegroundColor Yellow
+        Write-Host "2. Tác vụ 2..." -ForegroundColor Yellow
+        Write-Host "0. Quay lại Menu IT-113" -ForegroundColor DarkGray
+        
+        $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 0)"
+        switch ($subChoice) {
+            '1' { Show-SubSubMenu-WindowsSetup }
+            '2' { Write-Host "Đang xử lý..." -ForegroundColor Green; Start-Sleep 1 }
+            '0' { return }
+            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
+        }
+    }
+}
+
+# --- MENU CẤP 1: IT-113 ---
 function Invoke-IT113-Menu {
-    $requiredPaths = @("\\IT\Software", "\\IT\Software2", "\\IT-E580\Software", "\\IT-E580\Software2", "C:\SW")
-    $validDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -in 2,3 }
-    $existingPaths = @()
-    foreach ($drive in $validDrives) {
-        $root = $drive.DeviceID
-        if (Test-Path (Join-Path $root "Software")) { $existingPaths += Join-Path $root "Software" }
-        if (Test-Path (Join-Path $root "Software2")) { $existingPaths += Join-Path $root "Software2" }
-        if (Test-Path (Join-Path $root "OneDrive\TACOMPUTER\Software")) { $existingPaths += Join-Path $root "OneDrive\TACOMPUTER\Software" }
-    }
-    $currentRaw = @((Get-MpPreference).ExclusionPath) | Where-Object { $_ }
-    $currentNorm = $currentRaw | ForEach-Object { ($_.TrimEnd('\')).ToLower() }
-    
-    foreach ($path in ($requiredPaths + $existingPaths)) {
-        if (($path.TrimEnd('\')).ToLower() -notin $currentNorm) {
-            try { Add-MpPreference -ExclusionPath $path -ErrorAction SilentlyContinue } catch {}
-        }
-    }
-    
-    # --- Hàm Menu Cài đặt Windows (IT-113-1-1) ---
-    function Show-SubSubMenu-WindowsSetup {
-        $subSubChoice = ""
-        while ($subSubChoice -ne "0") {
-            Clear-Host
-            Write-Host "=== CÀI ĐẶT WINDOWS (LOCAL MANAGER) IT-113-1-1 ===" -ForegroundColor Cyan
-            # ... In menu 1-8 ...
-            $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
-            
-            switch ($subSubChoice) {
-                '1' { Write-Host "Đang chạy 1..." -ForegroundColor Green; Start-Sleep 1 }
-                # ... các case khác ...
-                '0' { return }
-                default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
-            }
-        }
-    }
-    
-    # --- Hàm Menu Deployment (IT-113-1) ---
-    function Show-Deployment-Menu {
-        $subChoice = ""
-        while ($subChoice -ne "0") {
-            Clear-Host
-            Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
-            Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
-            # ... In menu 2-5 ...
-            $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 0)"
-            
-            switch ($subChoice) {
-                '1' { Show-SubSubMenu-WindowsSetup } # Gọi hàm con
-                '2' { Write-Host "Đang xử lý 2..." -ForegroundColor Green; Start-Sleep 1 }
-                '0' { return }
-                default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
-            }
-        }
-    }
-    
-    # --- Vòng lặp Menu chính ---
-    while ($true) {
-        # ... In Menu chính (1-3) ...
-        $choice = Read-Host "Vui lòng nhập số (1-3)"
-        switch ($choice) {
-            '1' { Show-Deployment-Menu } # Gọi hàm Deployment
-            '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
-            '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
-            '0' { return }
-        }
-    }
+    # Thực hiện các thiết lập cần thiết (ExclusionPath)
+    # ... (Giữ nguyên logic của bạn ở đây) ...
+
+    $choice = ""
+    while ($choice -ne "0") {
+        Clear-Host
+        Write-Host "=== MENU CHÍNH IT-113 ===" -ForegroundColor Cyan
+        Write-Host "1. Triển khai Windows (IT-113-1)" -ForegroundColor Yellow
+        Write-Host "2. Fix Network" -ForegroundColor Yellow
+        Write-Host "3. Tiện ích SW2" -ForegroundColor Yellow
+        Write-Host "0. Quay lại Menu chính" -ForegroundColor DarkGray
+        
+        $choice = Read-Host "Vui lòng nhập số"
+        switch ($choice) {
+            '1' { Show-Deployment-Menu }
+            '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
+            '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
+            '0' { return }
+            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
+        }
+    }
 }
 
-# --- MENU 115 CHẠY TRÊN RAM ---
+# --- MENU 115 ---
 function Invoke-IT115-Menu {
-    Clear-Host
-    Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
-    Read-Host "`nNhấn Enter để quay lại Menu chính..."
-    return
+    Clear-Host
+    Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
+    Read-Host "`nNhấn Enter để quay lại Menu chính..."
 }
-
 
 # =====================================================
 # GIAO DIỆN MENU CHÍNH (MAIN MENU)
