@@ -141,40 +141,24 @@ if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType D
 # Định nghĩa nội dung chuẩn cho file IT_Github-call.ps1
 $CallScriptContent = 'Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1?t=$([DateTime]::Now.Ticks)")'
 
-# 1. Luôn đảm bảo IT_Github-call.ps1 ở C:\SW có nội dung đúng
-try {
-    $CurrentContent = if (Test-Path $LocalScriptPath) { Get-Content $LocalScriptPath -Raw } else { "" }
+# Kiểm tra nếu file đang chạy KHÔNG nằm trong C:\SW
+if ($MyInvocation.MyCommand.Path -notlike "$SystemDriveSW\*") {
     
-    if ($CurrentContent -ne $CallScriptContent) {
-        Write-Host "[SYSTEM] Đang cập nhật IT_Github-call.ps1 tại C:\SW..." -ForegroundColor Green
-        [System.IO.File]::WriteAllText($LocalScriptPath, $CallScriptContent, [System.Text.Encoding]::UTF8)
-    }
-} catch {
-    Write-Host "[SYSTEM] Lỗi cập nhật file trung gian!" -ForegroundColor Red
-}
-
-# 2. Sao chép IT_Github.exe vào C:\SW nếu chưa có hoặc khác version
-if (Test-Path $ExeSourcePath) {
-    # Kiểm tra nếu file chưa tồn tại ở C:\SW thì copy
-    if (-not (Test-Path $DestExePath)) {
-        Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
-        Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
-    }
-}
-
-# 2. Sao chép file IT_Github.exe vào C:\SW
-if (Test-Path $ExeSourcePath) {
-    # Chuyển cả hai về đường dẫn tuyệt đối (Full Path) để so sánh chuỗi
-    $SourceFull = (Get-Item $ExeSourcePath).FullName
-    $DestFull   = (Convert-Path $DestExePath -ErrorAction SilentlyContinue) # Nếu chưa tồn tại thì trả về $null
-
-    # Nếu file đích chưa tồn tại (Null) HOẶC đường dẫn khác nhau thì mới copy
-    if ($null -eq $DestFull -or $SourceFull -ne $DestFull) {
-        Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
-        Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
-    } else {
-        Write-Host "[SYSTEM] File đã nằm đúng vị trí, bỏ qua bước sao chép." -ForegroundColor DarkGray
-    }
+    if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
+    
+    # Copy file IT_Github-call.ps1 (Giả định nó nằm cùng thư mục với file exe bạn đang chạy)
+    $SourceDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $SourceCallScript = Join-Path $SourceDir "IT_Github-call.ps1"
+    $SourceExe = Join-Path $SourceDir "IT_Github.exe"
+    
+    if (Test-Path $SourceCallScript) { Copy-Item $SourceCallScript $LocalScriptPath -Force }
+    if (Test-Path $SourceExe) { Copy-Item $SourceExe $DestExePath -Force }
+    
+    Write-Host "[SYSTEM] Đã sao chép file vào $SystemDriveSW. Đang khởi động lại từ C:\SW..." -ForegroundColor Green
+    
+    # Chạy file .exe từ C:\SW
+    Start-Process -FilePath $DestExePath
+    exit
 }
 
 # 🚩 <<<--- TẠO SHORTCUT IT_Github.exe --->>>
