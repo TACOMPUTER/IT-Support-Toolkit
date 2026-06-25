@@ -221,7 +221,7 @@ function Invoke-IT113-Menu {
     $PathTo113 = Join-Path $ScriptDir "IT\IT-113\IT-113-1.ps1"
 
     while ($true) {
-        Clear-Host
+        
         $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
         $LineWidth = [Math]::Max(40, $ConsoleWidth - 1)
 
