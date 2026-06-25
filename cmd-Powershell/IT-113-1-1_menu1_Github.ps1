@@ -1,3 +1,7 @@
+# Bắt buộc load Assembly này trước khi sử dụng các thành phần UI
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
 param($LibScript, $consoleHandle)
 
 function Show-SetupWindowsMenu {
