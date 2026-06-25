@@ -199,6 +199,7 @@ function Show-IT113-1-1 {
     while ($subSubChoice -ne "0") {
         Clear-Host
         Write-Host "=== 1. Vừa cài đặt xong Windows (IT-113-1-1) ===" -ForegroundColor Cyan
+		Write-Host ""
         Write-Host "1. Account Local Manager - Add 'Guest'`n   Partitions_Drives - Move 'C:\Users', 'OneDrive'" -ForegroundColor Yellow
     	Write-Host "2. Windows Firewall Control" -ForegroundColor Magenta
     	Write-Host "3. Check Activation status in Microsoft" -ForegroundColor Yellow
@@ -234,10 +235,10 @@ function Show-IT113-1 {
     		Write-Host (" " * $left) -NoNewline
     		Write-Host $text
     	}
-
 	    Write-Host ("+" * $Host.UI.RawUI.WindowSize.Width) -ForegroundColor DarkGray
     
-        Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
+        Write-Host ""
+		Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
         Write-Host "2. MS Office và các phần mềm cơ bản" -ForegroundColor Magenta
         Write-Host "3. Phần mềm SW2: Patched - CAD2007 - LT2018 - SKU2021" -ForegroundColor Yellow
     	Write-Host "4. Update các máy Deployment" -ForegroundColor Magenta
@@ -262,7 +263,8 @@ function Show-IT113 {
     $choice = ""
     while ($choice -ne "0") {
         Clear-Host
-        Write-Host "=== MENU CHÍNH IT-113 ===" -ForegroundColor Cyan
+        Write-Host "=== Khu vực IT quản lý (IT-113) ===" -ForegroundColor Cyan
+		Write-Host ""
         Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
         Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
         Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
