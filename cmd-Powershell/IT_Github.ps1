@@ -258,7 +258,7 @@ function Show-IT113 {
 }
 
 # --- MENU 115 ---
-function Invoke-IT115-Menu {
+function Show-IT115 {
     Clear-Host
     Write-Host "=== KHU VỰC HỖ TRỢ IT-115 (RAM MODE) ===" -ForegroundColor Magenta
     Read-Host "`nNhấn Enter để quay lại Menu chính..."
@@ -490,6 +490,7 @@ function Show-Menu-IT {
             Start-Sleep 1
         }
     }
+}
    
     function Restart-ITGithub {
 
