@@ -216,9 +216,11 @@ function Invoke-IT113-Menu {
         }
     }
 
-    # Định nghĩa sẵn đường dẫn để dùng cho cả Debug và Switch
-    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $PathTo113 = Join-Path $ScriptDir "IT\IT-113\IT-113-1.ps1"
+    # 1. Định nghĩa Base URL (phần chung của tất cả các file)
+    $BaseGithubUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell"
+    
+    # 2. Định nghĩa đường dẫn file con dựa trên cấu trúc GitHub
+    $UrlTo113 = "$BaseGithubUrl/IT/IT-113/IT-113-1.ps1"
 
     while ($true) {
         
@@ -241,12 +243,20 @@ function Invoke-IT113-Menu {
         
         switch ($choice) {
             '1' { 
-                if (Test-Path $PathTo113) {
-                    . $PathTo113
-                    Show-Menu-IT-113-1 
-                } else {
-                    Write-Host "LỖI: Không tìm thấy file tại $PathTo113" -ForegroundColor Red
-                    Start-Sleep -Seconds 2
+                Clear-Host
+                Write-Host "🚀 Đang tải Menu 113-1 từ GitHub..." -ForegroundColor Green
+                
+                try {
+                    # Tải nội dung script từ Web về và chạy trong RAM
+                    $ScriptContent = Invoke-RestMethod -Uri $UrlTo113 -Headers @{ "Cache-Control" = "no-cache" }
+                    Invoke-Expression $ScriptContent
+                    
+                    # Gọi hàm menu vừa được nạp vào bộ nhớ RAM
+                    Show-Menu-IT-113-1
+                } catch {
+                    Write-Host "LỖI: Không thể tải script từ GitHub!" -ForegroundColor Red
+                    Write-Host $_.Exception.Message -ForegroundColor DarkGray
+                    Start-Sleep -Seconds 3
                 }
             }
             '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
