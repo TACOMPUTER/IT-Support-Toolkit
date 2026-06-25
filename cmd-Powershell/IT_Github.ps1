@@ -253,7 +253,7 @@ function Invoke-IT113-Menu {
         Write-Host "0. Quay lại Menu chính" -ForegroundColor Gray
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
         
-        $choice = Read-Host "Vui lòng nhập số (1-3 hoặc 111)"
+        $choice = Read-Host "Vui lòng nhập số (1-3)"
         
         switch ($choice) {
             '1' { 
@@ -270,7 +270,7 @@ function Invoke-IT113-Menu {
                     Write-Host "0. Quay lại Menu trước" -ForegroundColor Gray
                     Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
                     
-                    $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 99)"
+                    $subChoice = Read-Host "Nhập lựa chọn (1-5)"
                     
                     switch ($subChoice) {
                         '1' { Write-Host "Đang xử lý: Vừa cài đặt Windows..." -ForegroundColor Green; Start-Sleep 1 }
@@ -514,10 +514,17 @@ function Show-Menu-IT {
     $topMenu = Read-Host
     switch ($topMenu) {
         "111" { 
-            Write-Host "`n→ Đang reload lại script..." -ForegroundColor Cyan
-            # Lệnh này sẽ chạy lại chính file script hiện tại
-            & $MyInvocation.MyCommand.Path 
-            exit # Thoát tiến trình cũ sau khi đã gọi tiến trình mới
+            Write-Host "`n→ Đang cập nhật và reload lại script từ GitHub..." -ForegroundColor Cyan
+            
+            # 1. Tải lại nội dung mới nhất từ GitHub
+            $NewCode = Invoke-RestMethod -Uri "$ScriptWebUrl?t=$(Get-Date -UFormat %s)" -Headers @{ "Cache-Control" = "no-cache" }
+            
+            # 2. Ghi đè vào file local
+            [System.IO.File]::WriteAllText($LocalScriptPath, $NewCode, [System.Text.Encoding]::UTF8)
+            
+            # 3. Chạy file mới vừa tải về và thoát file cũ
+            Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`""
+            exit 
         }
         "113" { Invoke-IT113-Menu } 
         "115" { Invoke-IT115-Menu } 
