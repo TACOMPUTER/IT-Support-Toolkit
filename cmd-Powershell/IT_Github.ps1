@@ -110,32 +110,24 @@ $heightPx = $rect.Bottom - $rect.Top
 
 
 # =====================================================
-# KHU VỰC THIẾT LẬP ĐƯỜNG DẪN 
+# KHU VỰC THIẾT LẬP ĐƯỜNG DẪN (TỰ ĐỘNG THEO VỊ TRÍ SCRIPT)
 # =====================================================
-$TargetFolder = "OneDrive\TACOMPUTER\Software"
-$SourceSW = "C:\SW" 
 
-$AllDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.Name -ne "C:\" }
-foreach ($d in $AllDrives) {
-    $CheckPath = Join-Path $d.Name $TargetFolder
-    if (Test-Path $CheckPath) {
-        $SourceSW = $CheckPath
-        break
-    }
-}
-if ($SourceSW -eq "C:\SW") {
-    $CheckC = Join-Path "C:\" $TargetFolder
-    if (Test-Path $CheckC) { $SourceSW = $CheckC }
-}
+# Lấy đường dẫn thư mục chứa chính file script này
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-if ($SourceSW -match "OneDrive\\TACOMPUTER\\Software$") {
-    $drive = [System.IO.Path]::GetPathRoot($SourceSW)
-    $SourceSW2 = Join-Path $drive "Software2"
-} else {
-    $SourceSW2 = $SourceSW + "2"
-}
+# $SourceSW là thư mục gốc nơi chứa bộ công cụ của bạn
+$SourceSW = $ScriptDir
+
+# $SourceSW2 là thư mục "Software2" nằm cùng cấp với thư mục chứa script
+$SourceSW2 = Join-Path (Split-Path -Parent $ScriptDir) "Software2"
+
 $currentUser = "$env:COMPUTERNAME\$env:USERNAME"
-$ExeSourcePath = Join-Path $SourceSW "OS Tools\cmd-Powershell\IT_Github.exe"
+
+# IT_Github.exe nằm ngay trong thư mục chứa file script (theo như bạn nói)
+$ExeSourcePath = Join-Path $ScriptDir "IT_Github.exe"
+
+# =====================================================
 
 
 # =====================================================
