@@ -115,9 +115,4 @@ function Show-Menu-IT-113-1 {
 	}
 }
 
-	# Bắt đầu chương trình, không được xóa
-while ($true) {
-	Show-Menu-IT-113-1
-}
-
 # 🏁 <<<--- LIST MENU --->>>
