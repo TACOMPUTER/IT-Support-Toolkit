@@ -198,9 +198,15 @@ function Show-IT113-1-1 {
     $subSubChoice = ""
     while ($subSubChoice -ne "0") {
         Clear-Host
-        Write-Host "=== CÀI ĐẶT WINDOWS (LOCAL MANAGER) IT-113-1-1 ===" -ForegroundColor Cyan
-        Write-Host "1. Tác vụ 1..." -ForegroundColor Yellow
-        Write-Host "2. Tác vụ 2..." -ForegroundColor Yellow
+        Write-Host "=== 1. Vừa cài đặt xong Windows (IT-113-1-1) ===" -ForegroundColor Cyan
+        Write-Host "1. Account Local Manager - Add 'Guest'`n   Partitions_Drives - Move 'C:\Users', 'OneDrive'" -ForegroundColor Yellow
+    	Write-Host "2. Windows Firewall Control" -ForegroundColor Magenta
+    	Write-Host "3. Check Activation status in Microsoft" -ForegroundColor Yellow
+    	Write-Host "4. Change Account Picture & Lock Screen" -ForegroundColor Magenta
+    	Write-Host "5. Windows update - Enable 'Microphone & Location'" -ForegroundColor Yellow
+    	Write-Host "6. Enable 'Clipboard History' - Store update`n   Configure 'System Properties' & 'Control Panel' - Update 'Hosts'" -ForegroundColor Magenta
+    	Write-Host "7. BIOS, Firmware, Drivers update" -ForegroundColor Yellow
+    	Write-Host "8. Power, Network, Volume" -ForegroundColor Magenta
         Write-Host "0. Quay lại Menu Deployment (IT-113-1)" -ForegroundColor DarkGray
         
         $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
@@ -217,9 +223,25 @@ function Show-IT113-1 {
     $subChoice = ""
     while ($subChoice -ne "0") {
         Clear-Host
-        Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
+        $textLines = @(
+    	" Ghim mạng; Boot USB: USx3 & Phân vùng ổ C: (232.9GB=101770; 119.2GB=77559), còn lại 3.5G cuối cùng "
+    	" Vào Win; Rút USB; Chạy 'IT.ps1' trong '\\IT' để xóa tài khoản thường và kích hoạt 'Administrator' "
+    	)
+    	$width = $Host.UI.RawUI.WindowSize.Width
+    	foreach ($text in $textLines) {
+    		$pad = [Math]::Max(0, $width - $text.Length)
+    		$left  = [Math]::Floor($pad / 2)
+    		Write-Host (" " * $left) -NoNewline
+    		Write-Host $text
+    	}
+
+	    Write-Host ("+" * $Host.UI.RawUI.WindowSize.Width) -ForegroundColor DarkGray
+    
         Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
-        Write-Host "2. Tác vụ 2..." -ForegroundColor Yellow
+        Write-Host "2. MS Office và các phần mềm cơ bản" -ForegroundColor Magenta
+        Write-Host "3. Phần mềm SW2: Patched - CAD2007 - LT2018 - SKU2021" -ForegroundColor Yellow
+    	Write-Host "4. Update các máy Deployment" -ForegroundColor Magenta
+    	Write-Host "5. Máy thực tế: Triển khai lên máy thực tế cấp cho người dùng" -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu IT-113" -ForegroundColor DarkGray
         
         $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 0)"
@@ -241,16 +263,16 @@ function Show-IT113 {
     while ($choice -ne "0") {
         Clear-Host
         Write-Host "=== MENU CHÍNH IT-113 ===" -ForegroundColor Cyan
-        Write-Host "1. Triển khai Windows" -ForegroundColor Yellow
-        Write-Host "2. Fix Network" -ForegroundColor Yellow
-        Write-Host "3. Tiện ích SW2" -ForegroundColor Yellow
+        Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
+        Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
+        Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu chính" -ForegroundColor DarkGray
         
         $choice = Read-Host "Vui lòng nhập số"
         switch ($choice) {
             '1' { Show-IT113-1 }
-            '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
-            '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
+            '2' { Show-IT113-2 }
+            '3' { Show-IT113-3 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
         }
