@@ -219,9 +219,6 @@ function Invoke-IT113-Menu {
         }
     }
     
-    # Định nghĩa đường dẫn file con dựa trên cấu trúc GitHub
-    $UrlTo113 = "$BaseGithubUrl/IT/IT-113/IT-113-1.ps1"
-
     while ($true) {
         Clear-Host
         $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
@@ -237,8 +234,7 @@ function Invoke-IT113-Menu {
         Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
         
         # Thông tin Debug
-        Write-Host "DEBUG: ScriptDir: $ScriptDir" -ForegroundColor DarkGray
-        Write-Host "DEBUG: UrlTo113: $UrlTo113" -ForegroundColor DarkGray
+        Write-Host "Vị trí chạy Script: $ScriptDir" -ForegroundColor DarkGray        
         Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
 
         Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
