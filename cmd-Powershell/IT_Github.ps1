@@ -273,8 +273,8 @@ function Show_IT113 {
         $IT113_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_Choice) {
             '1' { Show_IT113_1 }
-            '2' { Show_IT113-2 }
-            '3' { Show_IT113-3 }
+            '2' { Show_IT113_2 }
+            '3' { Show_IT113_3 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
         }
