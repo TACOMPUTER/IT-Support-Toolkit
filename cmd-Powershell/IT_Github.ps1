@@ -261,7 +261,34 @@ function Invoke-IT113-Menu {
                     $subChoice = Read-Host "Nhập lựa chọn (1-5)"
                     
                     switch ($subChoice) {
-                        '1' { Write-Host "Đang xử lý: Vừa cài đặt Windows..." -ForegroundColor Green; Start-Sleep 1 }
+                        '1' { 
+                            $subSubChoice = ""
+                            while ($subSubChoice -ne "0") {
+                                Clear-Host
+                                Write-Host "=== CÀI ĐẶT WINDOWS (LOCAL MANAGER) ===" -ForegroundColor Cyan
+                                Write-Host "1. Account Local Manager - Add 'Guest', Move Users, OneDrive" -ForegroundColor Yellow
+                                Write-Host "2. Windows Firewall Control" -ForegroundColor Magenta
+                                Write-Host "3. Check Activation status" -ForegroundColor Yellow
+                                Write-Host "4. Change Account Picture & Lock Screen" -ForegroundColor Magenta
+                                Write-Host "5. Windows update - Microphone & Location" -ForegroundColor Yellow
+                                Write-Host "6. Clipboard History, System Properties, Hosts" -ForegroundColor Magenta
+                                Write-Host "7. BIOS, Firmware, Drivers update" -ForegroundColor Yellow
+                                Write-Host "8. Power, Network, Volume" -ForegroundColor Magenta
+                                Write-Host "0. Quay lại Menu Deployment" -ForegroundColor Gray
+                                Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
+                                
+                                $subSubChoice = Read-Host "Nhập lựa chọn (1-8 hoặc 0)"
+                                
+                                switch ($subSubChoice) {
+                                    '1' { Write-Host "Đang chạy: Account Local Manager..." -ForegroundColor Green; Start-Sleep 1 }
+                                    '2' { Write-Host "Đang chạy: Firewall Control..." -ForegroundColor Green; Start-Sleep 1 }
+                                    '3' { Write-Host "Đang chạy: Activation Status..." -ForegroundColor Green; Start-Sleep 1 }
+                                    # ... tiếp tục cho đến case '8'
+                                    '0' { break }
+                                    default { Write-Host "Lựa chọn không hợp lệ!" -ForegroundColor Red; Start-Sleep 1 }
+                                }
+                            }
+                        }
                         '2' { Write-Host "Đang xử lý: MS Office & Cơ bản..." -ForegroundColor Green; Start-Sleep 1 }
                         '3' { Write-Host "Đang xử lý: SW2 & Patched..." -ForegroundColor Green; Start-Sleep 1 }
                         '4' { Write-Host "Đang xử lý: Update Deployment..." -ForegroundColor Green; Start-Sleep 1 }
