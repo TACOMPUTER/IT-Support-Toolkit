@@ -147,9 +147,17 @@ if ($MyInvocation.MyCommand.CommandType -ne 'ExternalScript' -or $MyInvocation.M
 }
 
 # 2. Sao chép file IT_Github.exe vào C:\SW
+# Chỉ thực hiện copy nếu file nguồn khác file đích
 if (Test-Path $ExeSourcePath) {
-    Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
-    Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
+    $SourcePathNormalized = (Get-Item $ExeSourcePath).FullName
+    $DestPathNormalized   = (Get-Item $DestExePath).FullName
+
+    if ($SourcePathNormalized -ne $DestPathNormalized) {
+        Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
+        Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
+    } else {
+        Write-Host "[SYSTEM] File đã nằm đúng vị trí, bỏ qua bước sao chép." -ForegroundColor DarkGray
+    }
 }
 
 # 🚩 <<<--- TẠO SHORTCUT IT_Github.exe --->>>
