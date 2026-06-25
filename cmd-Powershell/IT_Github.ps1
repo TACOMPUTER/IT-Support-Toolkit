@@ -493,8 +493,8 @@ function Show-Menu-IT {
     Write-Host $BorderLine -ForegroundColor DarkGray
     Write-Host ("{0,-$global:LabelWidth} >>> " -f "IT_Github.exe & IT_Github-call.ps1 Path") -NoNewline -ForegroundColor Green
     Write-Host $SourceSW -ForegroundColor Yellow
-	Write-Host "=== BUILD TEST ===" -ForegroundColor Red
-	Write-Host "BUILD LOADED: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Red
+	$buildTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+	Write-Host ("BUILD LOADED: {0}" -f $buildTime) -ForegroundColor Red
     Write-Host $BorderLine -ForegroundColor DarkGray
 
     Write-Host ""
