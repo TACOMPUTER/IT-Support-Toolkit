@@ -216,22 +216,20 @@ function Invoke-IT113-Menu {
         }
     }
 
+    # Định nghĩa sẵn đường dẫn để dùng cho cả Debug và Switch
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $PathTo113 = Join-Path $ScriptDir "IT\IT-113\IT-113-1.ps1"
+
     while ($true) {
         Clear-Host
         $ConsoleWidth = $Host.UI.RawUI.WindowSize.Width
         $LineWidth = [Math]::Max(40, $ConsoleWidth - 1)
 
-        Write-Host "<<< Danh sách 'Windows Security\Exclusions' hiện tại >>>" -ForegroundColor Cyan
-        $preferences = Get-MpPreference
-        $paths = if ($preferences.ExclusionPath) { $preferences.ExclusionPath } else { @("Không có") }
-        $paths | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+        # Thông tin Debug
+        Write-Host "DEBUG: ScriptDir: $ScriptDir" -ForegroundColor DarkGray
+        Write-Host "DEBUG: PathTo113: $PathTo113" -ForegroundColor DarkGray
+        Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
 
-        Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
-        Write-Host "DEBUG Path Info:" -ForegroundColor Cyan
-        Write-Host "PSScriptRoot: $PSScriptRoot" -ForegroundColor Yellow
-        Write-Host "PathTo113   : $PathTo113" -ForegroundColor Yellow
-        Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
-        
         Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
         Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
         Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
@@ -240,34 +238,21 @@ function Invoke-IT113-Menu {
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
         
         $choice = Read-Host "Vui lòng nhập số (1-3 hoặc 111)"
+        
         switch ($choice) {
             '1' { 
-                Clear-Host
-                Write-Host "🚀 Đang tải Menu 113-1..." -ForegroundColor Green
-                
-                # Đường dẫn trỏ từ IT_Github.ps1 tới IT-113-1.ps1
-                $PathTo113 = Join-Path $PSScriptRoot "IT\IT-113\IT-113-1.ps1"
-                
                 if (Test-Path $PathTo113) {
-                    . $PathTo113        # Nạp script vào bộ nhớ
-                    Show-Menu-IT-113-1  # Gọi hàm menu vừa được nạp
+                    . $PathTo113
+                    Show-Menu-IT-113-1 
                 } else {
                     Write-Host "LỖI: Không tìm thấy file tại $PathTo113" -ForegroundColor Red
                     Start-Sleep -Seconds 2
                 }
             }
-            '2' { 
-                Clear-Host
-                Write-Host "🚀 Đang chạy: Fix Network & Update Firmware trên RAM..." -ForegroundColor Green
-                Read-Host "`nNhấn Enter để quay lại Menu IT-113..."
-            }
-            '3' { 
-                Clear-Host
-                Write-Host "🚀 Đang chạy: Tiện ích SW2 trên RAM..." -ForegroundColor Green
-                Read-Host "`nNhấn Enter để quay lại Menu IT-113..."
-            }
+            '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
+            '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
             '111' { return } 
-            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep -Seconds 1 }
+            default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
         }
     }
 }
