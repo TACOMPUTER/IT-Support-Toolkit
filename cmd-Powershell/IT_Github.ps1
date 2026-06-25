@@ -212,7 +212,12 @@ function Show_IT113_1_1 {
         Write-Host ""
         $IT113_1_1_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_1_1_Choice) {
-            '1' { Write-Host "Đang chạy 1..." -ForegroundColor Green; Start-Sleep 1 }
+            '1' {
+			    # Load file trước (chỉ load 1 lần)
+			    . "$LibScript\IT-113-1-1_menu1_Github.ps1"
+			    # Gọi hàm
+			    Show-SetupWindowsMenu -LibScript $LibScript -consoleHandle $consoleHandle
+			}
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
         }
