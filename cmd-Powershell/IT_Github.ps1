@@ -19,8 +19,8 @@ $DestExePath     = Join-Path $SystemDriveSW "IT_Github.exe"
 $ScriptWebUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1"
 
 # ===== INIT WINAPI =====
-if (-not ("WinAPI" -as [type])) {
-Add-Type @"
+if (-not ("NativeMethods" -as [type])) {
+    Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 
@@ -86,21 +86,6 @@ try {
     } catch {}
 }
 
-# Move Window
-if (-not ("WinMove" -as [type])) {
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public class WinMove {
-    [DllImport("user32.dll")]
-    public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int W, int H, bool repaint);
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
-    public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
-}
-"@
-}
 $handle = (Get-Process -Id $PID).MainWindowHandle
 $rect = New-Object WinMove+RECT
 [WinMove]::GetWindowRect($handle, [ref]$rect)
