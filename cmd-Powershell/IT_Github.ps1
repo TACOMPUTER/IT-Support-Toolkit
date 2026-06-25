@@ -192,16 +192,9 @@ Write-Host "Path: $ShortcutStartMenuPath" -ForegroundColor DarkGray
 
 # 🏁 <<<--- KẾT THÚC TẠO SHORTCUT --->>>
 
-# =====================================================
-# KHU VỰC CORE TIẾN TRÌNH CON - CHẠY HOÀN TOÀN TRÊN RAM
-# =====================================================
-
-# =====================================================
-# CẤU TRÚC MENU PHÂN CẤP (IT-113 -> IT-113-1 -> IT-113-1-1)
-# =====================================================
 
 # --- MENU CẤP 3: IT-113-1-1 ---
-function Show-SubSubMenu-WindowsSetup {
+function Show-IT113-1-1 {
     $subSubChoice = ""
     while ($subSubChoice -ne "0") {
         Clear-Host
@@ -220,18 +213,18 @@ function Show-SubSubMenu-WindowsSetup {
 }
 
 # --- MENU CẤP 2: IT-113-1 ---
-function Show-Deployment-Menu {
+function Show-IT113-1 {
     $subChoice = ""
     while ($subChoice -ne "0") {
         Clear-Host
         Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
-        Write-Host "1. Vừa cài đặt xong Windows (Vào IT-113-1-1)" -ForegroundColor Yellow
+        Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
         Write-Host "2. Tác vụ 2..." -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu IT-113" -ForegroundColor DarkGray
         
         $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 0)"
         switch ($subChoice) {
-            '1' { Show-SubSubMenu-WindowsSetup }
+            '1' { Show-IT113-1-1 }
             '2' { Write-Host "Đang xử lý..." -ForegroundColor Green; Start-Sleep 1 }
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
@@ -240,7 +233,7 @@ function Show-Deployment-Menu {
 }
 
 # --- MENU CẤP 1: IT-113 ---
-function Invoke-IT113-Menu {
+function Show-IT113 {
     # Thực hiện các thiết lập cần thiết (ExclusionPath)
     # ... (Giữ nguyên logic của bạn ở đây) ...
 
@@ -248,14 +241,14 @@ function Invoke-IT113-Menu {
     while ($choice -ne "0") {
         Clear-Host
         Write-Host "=== MENU CHÍNH IT-113 ===" -ForegroundColor Cyan
-        Write-Host "1. Triển khai Windows (IT-113-1)" -ForegroundColor Yellow
+        Write-Host "1. Triển khai Windows" -ForegroundColor Yellow
         Write-Host "2. Fix Network" -ForegroundColor Yellow
         Write-Host "3. Tiện ích SW2" -ForegroundColor Yellow
         Write-Host "0. Quay lại Menu chính" -ForegroundColor DarkGray
         
         $choice = Read-Host "Vui lòng nhập số"
         switch ($choice) {
-            '1' { Show-Deployment-Menu }
+            '1' { Show-IT113-1 }
             '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
             '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
             '0' { return }
@@ -481,27 +474,54 @@ function Show-Menu-IT {
     Write-Host ""
     Write-Host "User vui lòng nhập số 115 để được hỗ trợ: " -NoNewline
     $topMenu = Read-Host
+
     switch ($topMenu) {
-        "111" { 
-            Write-Host "`n→ Đang khởi động lại hệ thống..." -ForegroundColor Cyan
-            
-            # 1. Tìm đường dẫn file .exe đang chạy
-            $ExePath = (Get-Process -Id $PID).Path # Hoặc trỏ cứng đến vị trí file nếu biết rõ
-            
-            # 2. Khởi động lại file .exe từ ổ mạng
-            # Dùng Start-Process để chạy .exe độc lập với tiến trình PowerShell hiện tại
-            if (Test-Path $ExeSourcePath) {
-                Start-Process -FilePath $ExeSourcePath
-            }
-            
-            # 3. Thoát tiến trình hiện tại
-            exit 
+
+        "111" { Restart-ITGithub }
+    
+        "113" { Show-IT113 }
+    
+        "115" { Show-IT115 }
+    
+        "999" { Show-Debug }
+    
+        "0"   { exit }
+    
+        default {
+            Write-Host "Lựa chọn không hợp lệ!" -ForegroundColor Red
+            Start-Sleep 1
         }
-        "113" { Invoke-IT113-Menu } 
-        "115" { Invoke-IT115-Menu } 
-        default { exit }            
     }
-}
+   
+    function Restart-ITGithub {
+
+        Write-Host "`n→ Đang khởi động lại hệ thống..." -ForegroundColor Cyan
+            
+        # 1. Tìm đường dẫn file .exe đang chạy
+        $ExePath = (Get-Process -Id $PID).Path # Hoặc trỏ cứng đến vị trí file nếu biết rõ
+        
+        # 2. Khởi động lại file .exe từ ổ mạng
+        # Dùng Start-Process để chạy .exe độc lập với tiến trình PowerShell hiện tại
+        if (Test-Path $ExeSourcePath) {
+            Start-Process -FilePath $ExeSourcePath
+        }
+        
+        # 3. Thoát tiến trình hiện tại
+        exit 
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+   
 
 # Vòng lặp duy trì giao diện
 while ($true) { 
