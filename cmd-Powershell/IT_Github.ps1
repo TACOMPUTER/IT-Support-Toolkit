@@ -246,7 +246,7 @@ function Invoke-IT113-Menu {
         Write-Host "Vị trí chạy Script: $ScriptDir" -ForegroundColor DarkGray        
         Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
 
-        Write-Host "=== KHU VỰC IT QUẢN LÝ (RAM MODE) ===" -ForegroundColor Cyan
+        Write-Host "=== KHU VỰC IT-113 (RAM MODE) ===" -ForegroundColor Cyan
         Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
         Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
         Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
@@ -259,9 +259,9 @@ function Invoke-IT113-Menu {
             '1' { 
                 # Mở menu con thay vì gọi file external
                 $subChoice = ""
-                while ($subChoice -ne "99") {
+                while ($subChoice -ne "0") {
                     Clear-Host
-                    Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) ===" -ForegroundColor Cyan
+                    Write-Host "=== TRIỂN KHAI WINDOWS (DEPLOYMENT) IT-113-1 ===" -ForegroundColor Cyan
                     Write-Host "1. Vừa cài đặt xong Windows" -ForegroundColor Yellow
                     Write-Host "2. MS Office và các phần mềm cơ bản" -ForegroundColor Magenta
                     Write-Host "3. Phần mềm SW2: Patched - CAD2007 - LT2018 - SKU2021" -ForegroundColor Yellow
