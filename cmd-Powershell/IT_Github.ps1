@@ -493,6 +493,8 @@ function Show-Menu-IT {
     Write-Host $BorderLine -ForegroundColor DarkGray
     Write-Host ("{0,-$global:LabelWidth} >>> " -f "IT_Github.exe & IT_Github-call.ps1 Path") -NoNewline -ForegroundColor Green
     Write-Host $SourceSW -ForegroundColor Yellow
+	Write-Host "=== BUILD TEST ===" -ForegroundColor Red
+	Write-Host "BUILD LOADED: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Red
     Write-Host $BorderLine -ForegroundColor DarkGray
 
     Write-Host ""
@@ -532,20 +534,7 @@ function Show-Menu-IT {
         # 3. Thoát tiến trình hiện tại
         exit 
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-   
-
+	
 # Vòng lặp duy trì giao diện
 while ($true) { 
     Show-Menu-IT 
