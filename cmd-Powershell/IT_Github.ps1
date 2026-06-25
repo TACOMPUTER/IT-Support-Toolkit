@@ -241,7 +241,7 @@ function Invoke-IT113-Menu {
         Write-Host "1. Triển khai 'Windows Deployment'" -ForegroundColor Yellow
         Write-Host "2. Các vấn đề về 'Network, Firmware'" -ForegroundColor Magenta
         Write-Host "3. Các vấn đề khác liên quan 'SW2'" -ForegroundColor Yellow
-        Write-Host "111. Quay lại Menu chính" -ForegroundColor Gray
+        Write-Host "0. Quay lại Menu chính" -ForegroundColor Gray
         Write-Host ("+" * $LineWidth) -ForegroundColor DarkGray
         
         $choice = Read-Host "Vui lòng nhập số (1-3 hoặc 111)"
@@ -258,7 +258,7 @@ function Invoke-IT113-Menu {
                     Write-Host "3. Phần mềm SW2: Patched - CAD2007 - LT2018 - SKU2021" -ForegroundColor Yellow
                     Write-Host "4. Update các máy Deployment" -ForegroundColor Magenta
                     Write-Host "5. Máy thực tế: Triển khai lên máy thực tế" -ForegroundColor Yellow
-                    Write-Host "99. Quay lại Menu trước" -ForegroundColor Gray
+                    Write-Host "0. Quay lại Menu trước" -ForegroundColor Gray
                     Write-Host ("-" * $LineWidth) -ForegroundColor DarkGray
                     
                     $subChoice = Read-Host "Nhập lựa chọn (1-5 hoặc 99)"
@@ -269,14 +269,14 @@ function Invoke-IT113-Menu {
                         '3' { Write-Host "Đang xử lý: SW2 & Patched..." -ForegroundColor Green; Start-Sleep 1 }
                         '4' { Write-Host "Đang xử lý: Update Deployment..." -ForegroundColor Green; Start-Sleep 1 }
                         '5' { Write-Host "Đang xử lý: Triển khai máy thực tế..." -ForegroundColor Green; Start-Sleep 1 }
-                        '99' { break }
+                        '0' { break }
                         default { Write-Host "Lựa chọn không hợp lệ!" -ForegroundColor Red; Start-Sleep 1 }
                     }
                 }
             }
             '2' { Write-Host "🚀 Đang chạy: Fix Network..." -ForegroundColor Green; Start-Sleep 1 }
             '3' { Write-Host "🚀 Đang chạy: Tiện ích SW2..." -ForegroundColor Green; Start-Sleep 1 }
-            '111' { return } 
+            '0' { return } 
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
         }
     }
