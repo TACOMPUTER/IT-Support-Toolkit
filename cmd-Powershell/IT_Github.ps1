@@ -483,8 +483,6 @@ function Show-Menu-IT {
     
         "115" { Show-IT115 }
     
-        "999" { Show-Debug }
-    
         "0"   { exit }
     
         default {
