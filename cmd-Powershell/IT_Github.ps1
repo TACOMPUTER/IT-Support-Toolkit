@@ -213,10 +213,23 @@ function Show_IT113_1_1 {
         $IT113_1_1_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_1_1_Choice) {
             '1' {
-			    # Load file trước (chỉ load 1 lần)
-			    . "$LibScript\IT-113-1-1_menu1_Github.ps1"
-			    # Gọi hàm
-			    Show-SetupWindowsMenu -LibScript $LibScript -consoleHandle $consoleHandle
+			    Write-Host "Đang tải menu từ GitHub..." -ForegroundColor Cyan
+			    
+			    # 1. Định nghĩa URL tới file menu con
+			    $Menu1Url = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/refs/heads/main/cmd-Powershell/IT-113-1-1_menu1_Github.ps1"
+			    
+			    try {
+			        # 2. Tải nội dung script vào bộ nhớ và thực thi để nạp hàm Show-SetupWindowsMenu
+			        $scriptContent = Invoke-RestMethod -Uri $Menu1Url
+			        Invoke-Expression $scriptContent
+			        
+			        # 3. Sau khi đã nạp hàm vào bộ nhớ, gọi nó ra
+			        Show-SetupWindowsMenu -LibScript $LibScript -consoleHandle $consoleHandle
+			    }
+			    catch {
+			        Write-Host "Lỗi khi tải menu từ GitHub: $_" -ForegroundColor Red
+			        Start-Sleep 2
+			    }
 			}
             '0' { return }
             default { Write-Host "Lựa chọn không hợp lệ!"; Start-Sleep 1 }
