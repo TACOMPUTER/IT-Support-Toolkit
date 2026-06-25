@@ -138,23 +138,28 @@ $BaseGithubUrl = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolki
 # =====================================================
 if (-not (Test-Path $SystemDriveSW)) { New-Item -Path $SystemDriveSW -ItemType Directory -Force | Out-Null }
 
-# 1. Tải code mới nhất từ GitHub về (ép bỏ qua cache)
+# Định nghĩa nội dung chuẩn cho file IT_Github-call.ps1
+$CallScriptContent = 'Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT_Github.ps1?t=$([DateTime]::Now.Ticks)")'
+
+# 1. Luôn đảm bảo IT_Github-call.ps1 ở C:\SW có nội dung đúng
 try {
-    Write-Host "[SYSTEM] Đang kiểm tra cập nhật từ GitHub..." -ForegroundColor DarkGray
-    $NewCode = Invoke-RestMethod -Uri "$ScriptWebUrl?t=$(Get-Date -UFormat %s)" -Headers @{ "Cache-Control" = "no-cache" } -ErrorAction Stop
+    $CurrentContent = if (Test-Path $LocalScriptPath) { Get-Content $LocalScriptPath -Raw } else { "" }
     
-    # Ghi đè nội dung mới vào file C:\SW\IT_Github-call.ps1
-    # Lưu ý: Chúng ta ghi đè chính nội dung script này vào file đó
-    [System.IO.File]::WriteAllText($LocalScriptPath, $NewCode, [System.Text.Encoding]::UTF8)
-    
-    # Nếu đang chạy từ nơi khác (ví dụ: Desktop, USB), ép nó nhảy sang chạy từ C:\SW
-    if ($MyInvocation.MyCommand.Path -ne $LocalScriptPath) {
-        Write-Host "[SYSTEM] Đã cập nhật xong, chuyển sang chạy bản từ C:\SW..." -ForegroundColor Green
-        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$LocalScriptPath`""
-        exit
+    if ($CurrentContent -ne $CallScriptContent) {
+        Write-Host "[SYSTEM] Đang cập nhật IT_Github-call.ps1 tại C:\SW..." -ForegroundColor Green
+        [System.IO.File]::WriteAllText($LocalScriptPath, $CallScriptContent, [System.Text.Encoding]::UTF8)
     }
 } catch {
-    Write-Host "[SYSTEM] Không thể kết nối GitHub, đang chạy bản local..." -ForegroundColor Yellow
+    Write-Host "[SYSTEM] Lỗi cập nhật file trung gian!" -ForegroundColor Red
+}
+
+# 2. Sao chép IT_Github.exe vào C:\SW nếu chưa có hoặc khác version
+if (Test-Path $ExeSourcePath) {
+    # Kiểm tra nếu file chưa tồn tại ở C:\SW thì copy
+    if (-not (Test-Path $DestExePath)) {
+        Copy-Item -Path $ExeSourcePath -Destination $DestExePath -Force | Out-Null
+        Write-Host "[SYSTEM] Đã sao chép IT_Github.exe vào $SystemDriveSW" -ForegroundColor Green
+    }
 }
 
 # 2. Sao chép file IT_Github.exe vào C:\SW
