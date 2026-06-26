@@ -213,26 +213,30 @@ function Show_IT113_1_1 {
         $IT113_1_1_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_1_1_Choice) {
             '1' {
-				Read-Host "08:54"
+				Read-Host "08:55"
 			    $Menu1Url = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT-113-1-1_menu1_Github.ps1?t=$([DateTime]::Now.Ticks)"
+    
+			    # Tạo đường dẫn file tạm tại C:\SW
+			    $TempMenuFile = Join-Path $SystemDriveSW "IT-113-1-1_menu1_Temp.ps1"
 			    
 			    try {
-			        # 1. Tải nội dung script về thành một chuỗi
-			        $scriptContent = Invoke-RestMethod -Uri $Menu1Url
+			        # 1. Tải về và ghi đè vào file tạm
+			        $content = Invoke-RestMethod -Uri $Menu1Url
+			        $content | Out-File -FilePath $TempMenuFile -Encoding utf8
 			        
-			        # 2. Tạo một ScriptBlock từ nội dung đó
-			        $sb = [scriptblock]::Create($scriptContent)
+			        # 2. Xóa cache của hàm cũ (nếu hàm đã tồn tại trong RAM)
+			        if (Test-Path Function:\Show-SetupWindowsMenu) {
+			            Remove-Item Function:\Show-SetupWindowsMenu
+			        }
 			        
-			        # 3. Thực thi ScriptBlock và truyền tham số vào
-			        # Khi dùng . (dot-source), các hàm bên trong sẽ được nạp vào session hiện tại
-			        . $sb $LibScript $consoleHandle
+			        # 3. Dot-source file tạm (đây là cách chuẩn để nhận diện 'param')
+			        . $TempMenuFile $LibScript $consoleHandle
 			        
-			        # 4. Lúc này hàm Show-SetupWindowsMenu đã tồn tại, gọi nó ra
+			        # 4. Gọi hàm
 			        Show-SetupWindowsMenu -LibScript $LibScript -consoleHandle $consoleHandle
 			    }
 			    catch {
-			        Write-Host "Lỗi tải menu: $_" -ForegroundColor Red
-			        Start-Sleep 2
+			        Write-Host "Lỗi: $_" -ForegroundColor Red
 			    }
 			}
             '0' { return }
