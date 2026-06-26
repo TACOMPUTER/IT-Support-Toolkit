@@ -213,6 +213,7 @@ function Show_IT113_1_1 {
         $IT113_1_1_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_1_1_Choice) {
             '1' {
+				Read-Host "08:54"
 			    $Menu1Url = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT-113-1-1_menu1_Github.ps1?t=$([DateTime]::Now.Ticks)"
 			    
 			    try {
