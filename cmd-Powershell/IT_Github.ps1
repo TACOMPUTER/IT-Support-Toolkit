@@ -213,21 +213,24 @@ function Show_IT113_1_1 {
         $IT113_1_1_Choice = Read-Host "Vui lòng nhập số"
         switch ($IT113_1_1_Choice) {
             '1' {
-			    Write-Host "Đang tải menu từ GitHub..." -ForegroundColor Cyan
-			    
-			    # 1. Định nghĩa URL tới file menu con
-			    $Menu1Url = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/refs/heads/main/cmd-Powershell/IT-113-1-1_menu1_Github.ps1"
+			    $Menu1Url = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/main/cmd-Powershell/IT-113-1-1_menu1_Github.ps1?t=$([DateTime]::Now.Ticks)"
 			    
 			    try {
-			        # 2. Tải nội dung script vào bộ nhớ và thực thi để nạp hàm Show-SetupWindowsMenu
+			        # 1. Tải nội dung script về thành một chuỗi
 			        $scriptContent = Invoke-RestMethod -Uri $Menu1Url
-			        Invoke-Expression $scriptContent
 			        
-			        # 3. Sau khi đã nạp hàm vào bộ nhớ, gọi nó ra
+			        # 2. Tạo một ScriptBlock từ nội dung đó
+			        $sb = [scriptblock]::Create($scriptContent)
+			        
+			        # 3. Thực thi ScriptBlock và truyền tham số vào
+			        # Khi dùng . (dot-source), các hàm bên trong sẽ được nạp vào session hiện tại
+			        . $sb $LibScript $consoleHandle
+			        
+			        # 4. Lúc này hàm Show-SetupWindowsMenu đã tồn tại, gọi nó ra
 			        Show-SetupWindowsMenu -LibScript $LibScript -consoleHandle $consoleHandle
 			    }
 			    catch {
-			        Write-Host "Lỗi khi tải menu từ GitHub: $_" -ForegroundColor Red
+			        Write-Host "Lỗi tải menu: $_" -ForegroundColor Red
 			        Start-Sleep 2
 			    }
 			}
