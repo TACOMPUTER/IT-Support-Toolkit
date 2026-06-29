@@ -18,6 +18,31 @@ public class WinAPI {
 }
 "@
 
+# 🚩 <<<--- CHỈ CHO 1 SCRIPT CHẠY --->>>
+
+$currentPID = $PID
+$scriptName = [System.IO.Path]::GetFileName($PSCommandPath)
+
+Get-Process powershell | Where-Object {
+    $_.Id -ne $currentPID -and
+    $_.Path -ne $null
+} | ForEach-Object {
+
+    try {
+        # Lấy command line an toàn hơn
+        $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+
+        if ($cmd -and $cmd -match [regex]::Escape($scriptName)) {
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        # bỏ qua lỗi SID mapping
+    }
+}
+
+# 🏁 <<<--- END --->>>
+
 # 2. XÁC ĐỊNH PATH & ADMIN
 $script:MainScript = if ($PSCommandPath) { $PSCommandPath } else { $MyInvocation.MyCommand.Path }
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
