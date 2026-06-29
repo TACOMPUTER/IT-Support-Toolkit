@@ -29,8 +29,8 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
 }
 
 # 3. SET WINDOW TITLE (Sửa cú pháp tại đây)
-$adminText = if ($IsAdmin) { "Admin" } else { "User" }
-$host.UI.RawUI.WindowTitle = "Running '" + (Split-Path $script:MainScript -Leaf) + "' | $adminText"
+$adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
+$host.UI.RawUI.WindowTitle = "Running '" + (Split-Path $script:MainScript -Leaf) + "' $adminText <<< IT_Github.ps1"
 
 # 4. RESIZE & MOVE
 $handle = [WinAPI]::GetConsoleWindow()
