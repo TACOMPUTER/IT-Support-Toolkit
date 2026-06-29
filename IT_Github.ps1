@@ -86,9 +86,9 @@ $hPx = $rect.Bottom - $rect.Top
 
 # 5. KHỞI TẠO CÁC BIẾN & HÀM CẦN THIẾT
 $script:IT113Script = $null
-$possiblePaths = @("\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1", "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1")
+$possiblePaths = @("\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\", "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\")
 $usbDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 2 }
-foreach ($drive in $usbDrives) { $possiblePaths += "$($drive.DeviceID)\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1" }
+foreach ($drive in $usbDrives) { $possiblePaths += "$($drive.DeviceID)\Software\OS Tools\cmd-Powershell\IT\IT-113\" }
 
 foreach ($path in $possiblePaths) { if (Test-Path $path) { $script:IT113Script = $path; break } }
 
@@ -349,7 +349,7 @@ function GoTo-IT-111 {
 function GoTo-IT-113 {
     if ($script:IT113Script) {
         Write-Host "`n→ Đang mở công cụ IT-113..." -ForegroundColor Cyan
-        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$script:IT113Script`""
+        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$script:IT113Script\IT-113.ps1`""
     } else {
         Write-Host "`n→ Công cụ 113 hiện không khả dụng!" -ForegroundColor Red
         Start-Sleep -Seconds 2
