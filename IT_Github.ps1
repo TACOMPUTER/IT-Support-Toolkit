@@ -100,6 +100,12 @@ function Write-Log ($text, $color, $htmlClass = "") {
 }
 
 
+function Run-IT-xxx {
+    param([string]$ScriptPath)
+    [WinAPI]::ShowWindow($consoleHandle, 6) # Minimize
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Wait
+    [WinAPI]::ShowWindow($consoleHandle, 9) # Restore
+}
 
 # ===== 3. HÀM HIỂN THỊ =====
 function Show-Menu-IT {
@@ -349,7 +355,8 @@ function GoTo-IT-111 {
 function GoTo-IT-113 {
     if ($script:IT113Script) {
         Write-Host "`n→ Đang mở công cụ IT-113..." -ForegroundColor Cyan
-        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$script:IT113Script\IT-113.ps1`""
+        # Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$script:IT113Script\IT-113.ps1`""
+		Run-IT-xxx "$script:IT113Script\IT-113.ps1" | Out-Null
     } else {
         Write-Host "`n→ Công cụ 113 hiện không khả dụng!" -ForegroundColor Red
         Start-Sleep -Seconds 2
