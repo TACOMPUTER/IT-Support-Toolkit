@@ -3,7 +3,7 @@ $fileName = Split-Path $MyInvocation.MyCommand.Path -Leaf
 $folderPath = "Github\IT-Support-Toolkit"
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
-$host.UI.RawUI.WindowTitle = "Running '$fileName' $adminText <<< $folderPath"
+$host.UI.RawUI.WindowTitle = "Running '$fileName' $adminText <<< call 'IT_Github.ps1' from $folderPath"
 
 Add-Type @"
 using System;
