@@ -14,9 +14,11 @@ public class WinAPI {
     [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int W, int H, bool repaint);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
     [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+	[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     public struct RECT { public int Left, Top, Right, Bottom; }
 }
 "@
+$consoleHandle = [WinAPI]::GetConsoleWindow()
 
 # 🚩 <<<--- CHỈ CHO 1 SCRIPT CHẠY --->>>
 
