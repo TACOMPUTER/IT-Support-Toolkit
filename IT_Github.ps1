@@ -385,10 +385,10 @@ function Show-Menu-IT {
             $NetworkFile = Join-Path $NetworkPath $FileName
             $HtmlContent | Set-Content $NetworkFile -Encoding UTF8 -Force
         } catch { 
-            Write-Host "[ONLINE] WARNING → Có mạng nhưng folder mạng đang chặn quyền ghi file!" -ForegroundColor Red
+            Write-Host "`n[ONLINE] WARNING → Có mạng nhưng folder mạng đang chặn quyền ghi file!" -ForegroundColor Red
         }
     } else {
-        Write-Host "[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua luu ban backup tren server." -ForegroundColor DarkGray
+        Write-Host "`n[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua luu ban backup tren server." -ForegroundColor DarkGray
     }
 # 🏁 KẾT THÚC EXPORT
     
