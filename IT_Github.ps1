@@ -1,6 +1,6 @@
 param(
-    [int]$PSWidth = 80,
-    [int]$PSHeight = 52,
+    [int]$PSWidth = 83,
+    [int]$PSHeight = 58,
     [int]$PosX = 0,
     [int]$PosY = 0,
     [bool]$SkipAdminCheck = $false
@@ -62,24 +62,28 @@ $host.UI.RawUI.WindowTitle = "Running '" + (Split-Path $script:MainScript -Leaf)
 # 4. RESIZE & MOVE
 $handle = [WinAPI]::GetConsoleWindow()
 
-# Lấy kích thước hiện tại của màn hình console
-$currentWindow = $host.UI.RawUI.WindowSize
-$currentBuffer = $host.UI.RawUI.BufferSize
-
-# 1. Đặt WindowSize trước (nếu WindowSize mới lớn hơn hiện tại)
 try {
-    $newWindowSize = New-Object System.Management.Automation.Host.Size($PSWidth, $PSHeight)
-    $host.UI.RawUI.WindowSize = $newWindowSize
+    # 1. Lấy giới hạn kích thước tối đa của màn hình hiện tại
+    $maxSize = $host.UI.RawUI.MaxPhysicalWindowSize
+    $safeWidth = [Math]::Min($PSWidth, $maxSize.Width)
+    $safeHeight = [Math]::Min($PSHeight, $maxSize.Height)
+
+    # 2. Đặt BufferSize TẠM (đảm bảo Width đủ rộng, không bị nhỏ hơn WindowSize hiện tại)
+    $tempBufWidth = [Math]::Max($host.UI.RawUI.WindowSize.Width, $safeWidth)
+    $newBufferHeight = [Math]::Max(1000, $safeHeight)
+    $host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size($tempBufWidth, $newBufferHeight)
+
+    # 3. Mới bắt đầu set WindowSize bằng kích thước an toàn
+    $host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size($safeWidth, $safeHeight)
+
+    # 4. Đặt lại BufferSize lần cuối để Width khít với Window (loại bỏ thanh cuộn ngang)
+    $host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size($safeWidth, $newBufferHeight)
+
 } catch {
-    Write-Warning "Không thể thay đổi kích thước WindowSize."
+    Write-Warning "Không thể thay đổi kích thước Window/Buffer. Đang dùng kích thước mặc định."
 }
 
-# 2. Đặt BufferSize: Phải luôn >= WindowSize
-# Chúng ta lấy giá trị lớn hơn hoặc bằng chiều cao của Window mới
-$newBufferHeight = [Math]::Max(1000, $PSHeight)
-$host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size($PSWidth, $newBufferHeight)
-
-# 3. MoveWindow
+# 5. MoveWindow
 $rect = New-Object WinAPI+RECT
 [WinAPI]::GetWindowRect($handle, [ref]$rect)
 $wPx = $rect.Right - $rect.Left
@@ -101,10 +105,9 @@ function Write-Log ($text, $color, $htmlClass = "") {
     if ($htmlClass) { $script:ReportLines += "<span class='$htmlClass'>$cleanText</span>" } else { $script:ReportLines += "$cleanText" }
 }
 
-
 function Run-IT-xxx {
     param([string]$ScriptPath)
-    [WinAPI]::ShowWindow($consoleHandle, 6) # Minimize
+    [WinAPI]::ShowWindow($consoleHandle, 2) # Minimize
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Wait
     [WinAPI]::ShowWindow($consoleHandle, 9) # Restore
 }
@@ -112,13 +115,22 @@ function Run-IT-xxx {
 # ===== 3. HÀM HIỂN THỊ =====
 function Show-Menu-IT {
     $script:ReportLines = @() # Reset báo cáo mỗi lần chạy
-	Clear-Host
-    $w = 80
+    Clear-Host
+    
+    # ---------------------------------------------------------
+    # 🚩 SỬA TẠI ĐÂY: AUTO THEO BỀ RỘNG CỬA SỔ
+    # Trừ đi 1 để tránh việc bị rớt dòng (line-wrap) nếu Console xuất hiện thanh cuộn dọc
+    $w = $host.UI.RawUI.WindowSize.Width - 1
+    
+    # (Tùy chọn) Nếu bạn muốn ép cứng luôn bằng đúng tham số cấu hình ban đầu thì đổi thành:
+    # $w = $PSWidth
+    # ---------------------------------------------------------
+
     $m = " " # Margin 2 khoảng trắng
     
     # Nhận dạng Laptop/PC
-    $IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
-    $infoTitle = if ($IsLaptop) { "Laptop Information" } else { "PC Information" }
+	$IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
+	$infoTitle = if ($IsLaptop) { "Laptop Information" } else { "PC Information" }	
 	
 	# In tiêu đề
     Write-Host ("+" * $w) -ForegroundColor DarkGray
@@ -134,8 +146,11 @@ function Show-Menu-IT {
     $BIOS = Get-CimInstance Win32_BIOS; $GPU = Get-CimInstance Win32_VideoController
     $RegOS = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
 
-    Write-Log "$m<<< $infoTitle >>>" "Cyan" "cyan"
-    Write-Log "`n" "" ""
+    # Thêm Timestamp
+	$RunTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss (dddd)"
+	Write-Log "$m<<< $infoTitle >>>" "Cyan" "cyan"
+	Write-Log "$mRun at: $RunTime" "DarkGray" "gray"
+	Write-Log "`n" "" ""
     
     function Show-Line ($l, $v) { 
         Write-Log ($m + "{0,-22} : " -f $l) "Green" "green"
@@ -156,51 +171,105 @@ function Show-Menu-IT {
 	Show-Sub "Serial" $BIOS.SerialNumber
 	Show-Sub "BIOS ver" $BIOS.SMBIOSBIOSVersion
     
-    # ===== CPU & RAM Phân tách theo Socket =====
-    $cpuList = @($CPU)
+    # ===== CPU & RAM =====
     Write-Log "`n"
-    Show-Line "CPU" ""
     
-    foreach ($c in $cpuList) { 
-        # Hiển thị CPU theo ID (CPU 0, CPU 1...)
-        Show-Sub "CPU $($c.DeviceID -replace 'CPU','')" $c.Name
-    }
-
+    $cpuList = @($CPU) | Sort-Object DeviceID # Đảm bảo sắp xếp đúng thứ tự CPU0, CPU1
+    $totalCPU = $cpuList.Count
+    
+    # Lấy thông tin RAM với cơ chế an toàn
+    $RAM = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
+    $memArrays = @(Get-CimInstance Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue)
+    
+    # Xác định loại RAM ECC hay Non-ECC công thức chính xác cho cả mảng
+    $ramType = if ($memArrays | Where-Object { $_.MemoryErrorCorrection -in 5,6 }) { "ECC" } else { "Non-ECC" }
+    $totalRAM = if ($RAM) { [math]::round(($RAM | Measure-Object Capacity -Sum).Sum / 1GB) } else { 0 }
+    
+    Show-Line "CPU" "$totalCPU CPU"
+    Show-Line "RAM (TOTAL)" "$totalRAM GB ($ramType)"
     Write-Log "`n" "" ""
-    $memArray = Get-CimInstance Win32_PhysicalMemoryArray
-    
-    # Hiển thị RAM theo nhóm CPU (Sử dụng Group-Object)
-    # Các máy Z620 thường trả về Node hoặc DeviceLocator chứa thông tin CPU
-    $ramGroups = $RAM | Group-Object -Property { 
-        if ($_.DeviceLocator -match "CPU1") { "CPU 1" } else { "CPU 0" } 
-    } | Sort-Object Name
 
-    foreach ($group in $ramGroups) {
-        Show-Line "RAM - $($group.Name)" ""
-        foreach ($r in $group.Group) {
-            $label = $r.DeviceLocator -replace "DIMM","Slot"
-            $info = "$([math]::round($r.Capacity/1GB)) GB | $($r.Speed) MHz | $($r.Manufacturer.Trim())"
-            Show-Sub $label $info
+    $cpuIdx = 0
+    foreach ($c in $cpuList) {
+        $cpuId = $c.DeviceID -replace 'CPU',''
+        $cpuName = $c.Name
+        
+        # Lọc RAM thuộc CPU hiện tại
+        $cpuRAM = $RAM | Where-Object { 
+            $_.DeviceLocator -match "CPU$cpuId|Node$cpuId" -or 
+            ($cpuId -eq "0" -and $_.DeviceLocator -notmatch "CPU1|Node1")
         }
-    }
+        
+        # 1. BẮT ĐẦU ĐẾM THỦ CÔNG SỐ RAM ĐANG CẮM THỰC TẾ
+        $trueUsedSlots = 0
+        $ramOutputLines = @()
+        
+        foreach ($r in $cpuRAM) {
+            $label = if ($r.DeviceLocator) { $r.DeviceLocator -replace "DIMM","Slot" -replace " ", "" } else { "Slot $($trueUsedSlots + 1)" }
+            $size = [math]::round($r.Capacity/1GB)
+            $manu = if ($r.Manufacturer) { $r.Manufacturer.Trim() } else { "Unknown" }
+            $part = if ($r.PartNumber) { $r.PartNumber.Trim() } else { "Unknown" }
+            
+            # Lưu lại chuỗi thông tin để in ra sau
+            $info = "$size GB | $($r.Speed) MHz | $manu | $part"
+            $ramOutputLines += [PSCustomObject]@{ Label = $label; Info = $info }
+            
+            $trueUsedSlots++
+        }
+        
+        # 2. XÁC ĐỊNH TỔNG SỐ KHE (SLOTS) THỰC TẾ CHO TỪNG CPU KHÁC NHAU
+        $cpuTotalSlots = 4 # Mặc định dự phòng thấp nhất
+        
+        if ($totalCPU -eq 1) {
+            # Máy 1 CPU (như Z420), lấy chuẩn số khe hệ thống khai báo
+            if ($memArrays.Count -gt 0) { $cpuTotalSlots = $memArrays[0].MemoryDevices } else { $cpuTotalSlots = 8 }
+        } else {
+            # Máy nhiều CPU (như Z620)
+            if ($memArrays.Count -gt $cpuIdx) {
+                # Trường hợp WMI trả về nhiều Array độc lập (Mỗi CPU nắm 1 mảng khe riêng)
+                $cpuTotalSlots = $memArrays[$cpuIdx].MemoryDevices
+            } else {
+                # Trường hợp WMI bị lỗi gom chung thành 1 Array tổng (ví dụ báo tổng máy có 12 khe)
+                $totalDevicesAll = ($memArrays | Measure-Object MemoryDevices -Sum).Sum
+                if ($totalDevicesAll -eq 12) {
+                    # Fix cứng theo cấu trúc chuẩn của HP Z620: CPU0 = 8 slots, CPU1 = 4 slots
+                    $cpuTotalSlots = if ($cpuIdx -eq 0) { 8 } else { 4 }
+                } else {
+                    # Cơ chế Fallback cuối cùng nếu không khớp form nào
+                    $cpuTotalSlots = [math]::Max(4, $trueUsedSlots)
+                }
+            }
+        }
+        
+        # Ép tổng số khe không được nhỏ hơn số thanh thực tế đang cắm
+        if ($cpuTotalSlots -lt $trueUsedSlots) { $cpuTotalSlots = $trueUsedSlots }
+        
+        $cpuFreeSlots = $cpuTotalSlots - $trueUsedSlots
+        if ($cpuFreeSlots -lt 0) { $cpuFreeSlots = 0 }
 
-    # Tổng kết slot
-    # 1. Lấy tất cả mảng MemoryArray
-    $memArrays = Get-CimInstance Win32_PhysicalMemoryArray
-    
-    # 2. Tính tổng số khe cắm (MemoryDevices) từ tất cả các mảng (phòng trường hợp máy có nhiều Memory Controller)
-    $totalSlots = ($memArrays | Measure-Object MemoryDevices -Sum).Sum
-    
-    # 3. Tính số slot trống
-    $freeSlots = $totalSlots - $RAM.Count
-    
-    # 4. Hiển thị
-    Show-Sub "Available Slots" "$freeSlots / $totalSlots"
+        # 3. TÍNH TỔNG GB RAM CỦA RIÊNG CPU NÀY
+        $cpuTotalGB = if ($trueUsedSlots -gt 0) { 
+            [math]::round(($cpuRAM | Measure-Object Capacity -Sum).Sum / 1GB) 
+        } else { 0 }
+
+        # 4. IN KẾT QUẢ RA CONSOLE
+        Show-Line "     CPU$cpuId" $cpuName
+        Show-Sub "   └─ Total Memory" "$cpuTotalGB GB"
+        
+        foreach ($ro in $ramOutputLines) {
+            Show-Sub "      └─ $($ro.Label)" $ro.Info
+        }
+        
+        Show-Sub "      └─ Free/Total Slots" "$cpuFreeSlots / $cpuTotalSlots"
+        Write-Log "`n" "" ""
+        
+        $cpuIdx++ # Tăng tiến trình để đọc mảng Array tiếp theo cho CPU kế tiếp
+    }
     
 	Write-Log "`n"
 	
     $disks = Get-CimInstance Win32_DiskDrive
-    Show-Line "Storage (Total)" "$([math]::round(($disks | Measure-Object Size -Sum).Sum / 1GB)) GB"
+    Show-Line "STORAGE (TOTAL)" "$([math]::round(($disks | Measure-Object Size -Sum).Sum / 1GB)) GB"
     $i = 1; foreach ($d in $disks) { Show-Sub "Disk $i" "$($d.Model)  $([math]::round($d.Size/1GB)) GB"; $i++ }
     
 	Write-Log "`n"
@@ -209,47 +278,40 @@ function Show-Menu-IT {
     foreach ($g in $GPU) {
         if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ }
     }
-    Show-Line "Graphics" ("{0} VGA / {1} GPU" -f $vgaCount, $gpuCount)
+    Show-Line "GRAPHICS" ("{0} VGA / {1} GPU" -f $vgaCount, $gpuCount)
     foreach ($g in $GPU) {
         $label = if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { "VGA" } else { "GPU" }
         Show-Sub $label $g.Name
     }
 	
 	Write-Log "`n"
-	
-    Show-Line "MAC ADDRESS" ""
+	Show-Line "NETWORK ADAPTERS" ""
 
-	$net = Get-NetAdapter -Physical
+	$net = Get-NetAdapter -Physical | Sort-Object Name
 
 	foreach ($n in $net) {
-
-		switch -Regex ($n.Name) {
-			'^Wi-Fi$|^WiFi$' {
-				$type = 'WiFi'
-				break
-			}
-
-			'^Bluetooth' {
-				$type = 'Bluetooth'
-				break
-			}
-
-			default {
-				$type = 'LAN'
-			}
+		# Xác định loại
+		$type = switch -Regex ($n.Name) {
+			'^Wi-Fi|^Wireless' { 'Wi-Fi' }
+			'^Ethernet'        { 'Ethernet' }
+			'Bluetooth'        { 'Bluetooth' }
+			default            { 'LAN' }
 		}
 
-		Show-Sub "$type Adapter" $n.InterfaceDescription
-		Show-Sub "$type MAC" $n.MacAddress
+		$status = if ($n.Status -eq 'Up') { "√ Up" } else { "X Down" }
+		$speed  = if ($n.LinkSpeed) { $n.LinkSpeed } else { "N/A" }
+
+		Show-Sub "$type Adapter" "$($n.InterfaceDescription) - $status"
+		Show-Sub "   └─ MAC " $n.MacAddress
+		Show-Sub "   └─ Speed" $speed
 	}
     
 	Write-Log "`n"
-    Show-Line "Windows" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | $($RegOS.CurrentBuild).$($RegOS.UBR)"
-   
-    Write-Log "`n$m" "" ""
-    Write-Log "Current User         >>> " "Green" "green"
-    Write-Log "$env:COMPUTERNAME\$env:USERNAME`n" "Yellow" "yellow"
-
+    Show-Line "WINDOWS" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | $($RegOS.CurrentBuild).$($RegOS.UBR)"
+	
+	Write-Log "`n"   
+    Show-Line "Current User" "$env:COMPUTERNAME\$env:USERNAME"
+	
     # Xác định vị trí 113 để hiển thị
     $loc113 = if ($script:IT113Script) {
         if ($script:IT113Script -match '^\\\\[^\\]+') { ($matches[0]) } # Lấy \\IT hoặc \\IT-E580
@@ -257,10 +319,8 @@ function Show-Menu-IT {
         else { "Local/Unknown" }
     } else { "Offline" }
 
-	Write-Host ""
-    Write-Host "$m" -NoNewline
-    Write-Host "Current 113 location >>> " -NoNewline -ForegroundColor Green
-    Write-Host $loc113 -ForegroundColor Yellow
+	Write-Log "`n"   
+    Show-Line "Current 113 location" "$loc113"
 	
 	# 🚩 EXPORT HTML (TỐI ƯU: LUÔN LUÔN GHI LOCAL + TỰ ĐỘNG ĐẨY SERVER NẾU ONLINE)
     $Serial = $BIOS.SerialNumber
@@ -334,7 +394,7 @@ function Show-Menu-IT {
     
     Write-Host ("+" * $w) -ForegroundColor DarkGray
     Write-Host "$m" -NoNewline    
-    Write-Host "User vui lòng nhập " -NoNewline; 
+    Write-Host "`nUser vui lòng nhập " -NoNewline; 
     Write-Host "115" -ForegroundColor Yellow -NoNewline; 
     Write-Host " để được hỗ trợ nhanh: " -NoNewline
 	
