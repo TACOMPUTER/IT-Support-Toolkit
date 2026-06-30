@@ -1,7 +1,7 @@
 param(
     [int]$PSWidth = 83,
     [int]$PSHeight = 58,
-    [int]$PosX = 0,
+    [int]$PosX = -8,
     [int]$PosY = 0,
     [bool]$SkipAdminCheck = $false
 )
@@ -174,8 +174,8 @@ function Show-Menu-IT {
     # ===== CPU & RAM =====
     Write-Log "`n"
     
-    $cpuList = @($CPU) | Sort-Object DeviceID # Đảm bảo sắp xếp đúng thứ tự CPU0, CPU1
-    $totalCPU = $cpuList.Count
+    $cpuList = @(Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue)
+	$totalCPU = ($cpuList | Measure-Object).Count
     
     # Lấy thông tin RAM với cơ chế an toàn
     $RAM = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
@@ -253,14 +253,14 @@ function Show-Menu-IT {
         } else { 0 }
 
         # 4. IN KẾT QUẢ RA CONSOLE
-        Show-Line "     CPU$cpuId" $cpuName
-        Show-Sub "   └─ Total Memory" "$cpuTotalGB GB"
+        Show-Line "  CPU$cpuId" $cpuName
+        Show-Sub "└─ Total Memory" "$cpuTotalGB GB"
         
         foreach ($ro in $ramOutputLines) {
-            Show-Sub "      └─ $($ro.Label)" $ro.Info
+            Show-Sub "   └─ $($ro.Label)" $ro.Info
         }
         
-        Show-Sub "      └─ Free/Total Slots" "$cpuFreeSlots / $cpuTotalSlots"
+        Show-Sub "   └─ Free/Total Slots" "$cpuFreeSlots / $cpuTotalSlots"
         Write-Log "`n" "" ""
         
         $cpuIdx++ # Tăng tiến trình để đọc mảng Array tiếp theo cho CPU kế tiếp
@@ -285,7 +285,7 @@ function Show-Menu-IT {
     }
 	
 	Write-Log "`n"
-	Show-Line "NETWORK ADAPTERS" ""
+	Show-Line "NETWORK ADAPTER" ""
 
 	$net = Get-NetAdapter -Physical | Sort-Object Name
 
