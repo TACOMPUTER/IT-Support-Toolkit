@@ -90,13 +90,93 @@ $wPx = $rect.Right - $rect.Left
 $hPx = $rect.Bottom - $rect.Top
 [WinAPI]::MoveWindow($handle, $PosX, $PosY, $wPx, $hPx, $true) | Out-Null
 
-# 5. KHỞI TẠO CÁC BIẾN & HÀM CẦN THIẾT
-$script:IT113Script = $null
-$possiblePaths = @("\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\", "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\")
-$usbDrives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 2 }
-foreach ($drive in $usbDrives) { $possiblePaths += "$($drive.DeviceID)\Software\OS Tools\cmd-Powershell\IT\IT-113\" }
+# ==========================================================
+# XÁC ĐỊNH VỊ TRÍ IT-113.ps1 (THEO THỨ TỰ ƯU TIÊN)
+#
+# 1. D:\~H:\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113
+# 2. \\IT\Software\OS Tools\cmd-Powershell\IT\IT-113
+# 3. \\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113
+# 4. Tất cả ổ USB (Flash/HDD/SSD)
+# ==========================================================
 
-foreach ($path in $possiblePaths) { if (Test-Path $path) { $script:IT113Script = $path; break } }
+$script:IT113Script = $null
+$script:IT113Online = @()
+
+$SearchList = @()
+
+# ==========================================================
+# ƯU TIÊN 1 : OneDrive (D: -> H:)
+# ==========================================================
+foreach ($drive in 'D','E','F','G','H') {
+
+    $SearchList += "$($drive):\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+}
+
+# ==========================================================
+# ƯU TIÊN 2 : Server IT
+# ==========================================================
+$SearchList += "\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+# ==========================================================
+# ƯU TIÊN 3 : Server IT-E580
+# ==========================================================
+$SearchList += "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+# ==========================================================
+# ƯU TIÊN 4 : USB (Flash + HDD + SSD)
+# ==========================================================
+
+$usbDrives = Get-CimInstance Win32_DiskDrive |
+Where-Object InterfaceType -eq 'USB'
+
+foreach ($disk in $usbDrives) {
+
+    $partitions = Get-CimAssociatedInstance -InputObject $disk -Association Win32_DiskDriveToDiskPartition
+
+    foreach ($partition in $partitions) {
+
+        $logicalDisks = Get-CimAssociatedInstance -InputObject $partition -Association Win32_LogicalDiskToPartition
+
+        foreach ($logicalDisk in $logicalDisks) {
+
+            $SearchList += "$($logicalDisk.DeviceID)\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+        }
+    }
+}
+
+# ==========================================================
+# TÌM FILE ĐẦU TIÊN
+# ==========================================================
+
+foreach ($file in $SearchList) {
+
+    if (Test-Path $file) {
+
+        $folder = Split-Path $file -Parent
+
+        # Chỉ lấy phần đầu để hiển thị
+        if ($folder -match '^\\\\[^\\]+') {
+            $short = $matches[0]
+        }
+        elseif ($folder -match '^[A-Za-z]:') {
+            $short = $matches[0]
+        }
+        else {
+            $short = "Unknown"
+        }
+
+        if ($script:IT113Online -notcontains $short) {
+            $script:IT113Online += $short
+        }
+
+        # Chỉ gán location lần đầu (đúng thứ tự ưu tiên)
+        if (-not $script:IT113Script) {
+            $script:IT113Script = $folder
+        }
+    }
+}
 
 $script:ReportLines = @()
 function Write-Log ($text, $color, $htmlClass = "") {
@@ -116,22 +196,22 @@ function Run-IT-xxx {
 function Show-Menu-IT {
     $script:ReportLines = @() # Reset báo cáo mỗi lần chạy
     Clear-Host
-    
+
     # ---------------------------------------------------------
     # 🚩 SỬA TẠI ĐÂY: AUTO THEO BỀ RỘNG CỬA SỔ
     # Trừ đi 1 để tránh việc bị rớt dòng (line-wrap) nếu Console xuất hiện thanh cuộn dọc
     $w = $host.UI.RawUI.WindowSize.Width - 1
-    
+
     # (Tùy chọn) Nếu bạn muốn ép cứng luôn bằng đúng tham số cấu hình ban đầu thì đổi thành:
     # $w = $PSWidth
     # ---------------------------------------------------------
 
     $m = " " # Margin 2 khoảng trắng
-    
+
     # Nhận dạng Laptop/PC
 	$IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
-	$infoTitle = if ($IsLaptop) { "Laptop Information" } else { "PC Information" }	
-	
+	$infoTitle = if ($IsLaptop) { "Laptop Information" } else { "PC Information" }
+
 	# In tiêu đề
     Write-Host ("+" * $w) -ForegroundColor DarkGray
     $text = " IT support, Scripted by TACOMPUTER & GPT, 0933.848.990 "
@@ -151,16 +231,16 @@ function Show-Menu-IT {
 	Write-Log "$m<<< $infoTitle >>>" "Cyan" "cyan"
 	Write-Log "$mRun at: $RunTime" "DarkGray" "gray"
 	Write-Log "`n" "" ""
-    
-    function Show-Line ($l, $v) { 
+
+    function Show-Line ($l, $v) {
         Write-Log ($m + "{0,-22} : " -f $l) "Green" "green"
         Write-Log "$v`n" "Yellow" "yellow"
     }
-    function Show-Sub ($l, $v) { 
+    function Show-Sub ($l, $v) {
         Write-Log ($m + "  {0,-20} → " -f $l) "Blue" "blue"
         Write-Log "$v`n" "Blue" "blue"
     }
-	
+
 	Write-Log "`n"
 
     Show-Line "MAINBOARD" ""
@@ -170,21 +250,21 @@ function Show-Menu-IT {
 	Show-Sub "Model" $CS.Model
 	Show-Sub "Serial" $BIOS.SerialNumber
 	Show-Sub "BIOS ver" $BIOS.SMBIOSBIOSVersion
-    
+
     # ===== CPU & RAM =====
     Write-Log "`n"
-    
+
     $cpuList = @(Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue)
 	$totalCPU = ($cpuList | Measure-Object).Count
-    
+
     # Lấy thông tin RAM với cơ chế an toàn
     $RAM = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
     $memArrays = @(Get-CimInstance Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue)
-    
+
     # Xác định loại RAM ECC hay Non-ECC công thức chính xác cho cả mảng
     $ramType = if ($memArrays | Where-Object { $_.MemoryErrorCorrection -in 5,6 }) { "ECC" } else { "Non-ECC" }
     $totalRAM = if ($RAM) { [math]::round(($RAM | Measure-Object Capacity -Sum).Sum / 1GB) } else { 0 }
-    
+
     Show-Line "CPU" "$totalCPU CPU"
     Show-Line "RAM (TOTAL)" "$totalRAM GB ($ramType)"
     Write-Log "`n" "" ""
@@ -193,33 +273,33 @@ function Show-Menu-IT {
     foreach ($c in $cpuList) {
         $cpuId = $c.DeviceID -replace 'CPU',''
         $cpuName = $c.Name
-        
+
         # Lọc RAM thuộc CPU hiện tại
-        $cpuRAM = $RAM | Where-Object { 
-            $_.DeviceLocator -match "CPU$cpuId|Node$cpuId" -or 
+        $cpuRAM = $RAM | Where-Object {
+            $_.DeviceLocator -match "CPU$cpuId|Node$cpuId" -or
             ($cpuId -eq "0" -and $_.DeviceLocator -notmatch "CPU1|Node1")
         }
-        
+
         # 1. BẮT ĐẦU ĐẾM THỦ CÔNG SỐ RAM ĐANG CẮM THỰC TẾ
         $trueUsedSlots = 0
         $ramOutputLines = @()
-        
+
         foreach ($r in $cpuRAM) {
             $label = if ($r.DeviceLocator) { $r.DeviceLocator -replace "DIMM","Slot" -replace " ", "" } else { "Slot $($trueUsedSlots + 1)" }
             $size = [math]::round($r.Capacity/1GB)
             $manu = if ($r.Manufacturer) { $r.Manufacturer.Trim() } else { "Unknown" }
             $part = if ($r.PartNumber) { $r.PartNumber.Trim() } else { "Unknown" }
-            
+
             # Lưu lại chuỗi thông tin để in ra sau
             $info = "$size GB | $($r.Speed) MHz | $manu | $part"
             $ramOutputLines += [PSCustomObject]@{ Label = $label; Info = $info }
-            
+
             $trueUsedSlots++
         }
-        
+
         # 2. XÁC ĐỊNH TỔNG SỐ KHE (SLOTS) THỰC TẾ CHO TỪNG CPU KHÁC NHAU
         $cpuTotalSlots = 4 # Mặc định dự phòng thấp nhất
-        
+
         if ($totalCPU -eq 1) {
             # Máy 1 CPU (như Z420), lấy chuẩn số khe hệ thống khai báo
             if ($memArrays.Count -gt 0) { $cpuTotalSlots = $memArrays[0].MemoryDevices } else { $cpuTotalSlots = 8 }
@@ -240,40 +320,40 @@ function Show-Menu-IT {
                 }
             }
         }
-        
+
         # Ép tổng số khe không được nhỏ hơn số thanh thực tế đang cắm
         if ($cpuTotalSlots -lt $trueUsedSlots) { $cpuTotalSlots = $trueUsedSlots }
-        
+
         $cpuFreeSlots = $cpuTotalSlots - $trueUsedSlots
         if ($cpuFreeSlots -lt 0) { $cpuFreeSlots = 0 }
 
         # 3. TÍNH TỔNG GB RAM CỦA RIÊNG CPU NÀY
-        $cpuTotalGB = if ($trueUsedSlots -gt 0) { 
-            [math]::round(($cpuRAM | Measure-Object Capacity -Sum).Sum / 1GB) 
+        $cpuTotalGB = if ($trueUsedSlots -gt 0) {
+            [math]::round(($cpuRAM | Measure-Object Capacity -Sum).Sum / 1GB)
         } else { 0 }
 
         # 4. IN KẾT QUẢ RA CONSOLE
         Show-Line "  CPU$cpuId" $cpuName
         Show-Sub "└─ Total Memory" "$cpuTotalGB GB"
-        
+
         foreach ($ro in $ramOutputLines) {
             Show-Sub "   └─ $($ro.Label)" $ro.Info
         }
-        
+
         Show-Sub "   └─ Free/Total Slots" "$cpuFreeSlots / $cpuTotalSlots"
         Write-Log "`n" "" ""
-        
+
         $cpuIdx++ # Tăng tiến trình để đọc mảng Array tiếp theo cho CPU kế tiếp
     }
-    
+
 	Write-Log "`n"
-	
+
     $disks = Get-CimInstance Win32_DiskDrive
     Show-Line "STORAGE (TOTAL)" "$([math]::round(($disks | Measure-Object Size -Sum).Sum / 1GB)) GB"
     $i = 1; foreach ($d in $disks) { Show-Sub "Disk $i" "$($d.Model)  $([math]::round($d.Size/1GB)) GB"; $i++ }
-    
+
 	Write-Log "`n"
-    
+
 	$vgaCount = 0; $gpuCount = 0
     foreach ($g in $GPU) {
         if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ }
@@ -283,7 +363,7 @@ function Show-Menu-IT {
         $label = if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { "VGA" } else { "GPU" }
         Show-Sub $label $g.Name
     }
-	
+
 	Write-Log "`n"
 	Show-Line "NETWORK ADAPTER" ""
 
@@ -305,13 +385,13 @@ function Show-Menu-IT {
 		Show-Sub "   └─ MAC " $n.MacAddress
 		Show-Sub "   └─ Speed" $speed
 	}
-    
+
 	Write-Log "`n"
     Show-Line "WINDOWS" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | $($RegOS.CurrentBuild).$($RegOS.UBR)"
-	
-	Write-Log "`n"   
+
+	Write-Log "`n"
     Show-Line "Current User" "$env:COMPUTERNAME\$env:USERNAME"
-	
+
     # Xác định vị trí 113 để hiển thị
     $loc113 = if ($script:IT113Script) {
         if ($script:IT113Script -match '^\\\\[^\\]+') { ($matches[0]) } # Lấy \\IT hoặc \\IT-E580
@@ -319,9 +399,30 @@ function Show-Menu-IT {
         else { "Local/Unknown" }
     } else { "Offline" }
 
-	Write-Log "`n"   
-    Show-Line "Current 113 location" "$loc113"
-	
+	Write-Log "`n"
+
+	if ($script:IT113Online.Count) {
+
+		$online113 = $script:IT113Online | ForEach-Object {
+
+			if ($_ -eq $loc113) {
+				"$_ (in use)"
+			}
+			else {
+				$_
+			}
+
+		}
+
+		Show-Line "Current 113 online" ($online113 -join " | ")
+
+	}
+	else {
+
+		Show-Line "Current 113 online" "Offline"
+
+	}
+
 	# 🚩 EXPORT HTML (TỐI ƯU: LUÔN LUÔN GHI LOCAL + TỰ ĐỘNG ĐẨY SERVER NẾU ONLINE)
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
@@ -333,20 +434,20 @@ function Show-Menu-IT {
 <head>
 <meta charset="utf-8">
 <style>
-    body { 
-        font-family: 'Consolas', 'Lucida Console', monospace; 
-        background-color: #0c0c0c; 
-        color: #cccccc; 
-        padding: 20px; 
+    body {
+        font-family: 'Consolas', 'Lucida Console', monospace;
+        background-color: #0c0c0c;
+        color: #cccccc;
+        padding: 20px;
     }
-    pre { 
-        white-space: pre; 
+    pre {
+        white-space: pre;
         font-size: 14px;       /* Tăng cỡ chữ */
         line-height: 1.5;      /* Tăng giãn dòng để thoáng hơn */
     }
-    .green { color: #00ff00; } 
+    .green { color: #00ff00; }
     .yellow { color: #ffff00; }
-    .blue { color: #3b8ec2; } 
+    .blue { color: #3b8ec2; }
     .cyan { color: #00ffff; }
 </style>
 </head>
@@ -357,8 +458,8 @@ function Show-Menu-IT {
     # --- 1. LUÔN LUÔN GHI BẢN LOCAL TRƯỚC ---
     $LocalFolder = "C:\SW\Reports"
     try {
-        if (-not (Test-Path $LocalFolder)) { 
-            New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null 
+        if (-not (Test-Path $LocalFolder)) {
+            New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null
         }
         $LocalFile = Join-Path $LocalFolder $FileName
         $HtmlContent | Set-Content $LocalFile -Encoding UTF8 -Force
@@ -367,9 +468,9 @@ function Show-Menu-IT {
     }
 
     # --- 2. KIỂM TRA MẠNG VÀ ĐẨY TIẾP BẢN BACKUP LÊN SERVER ---
-    $ServerHost = "IT" 
+    $ServerHost = "IT"
     $NetworkPath = "\\$ServerHost\Guest\Computer list"
-    
+
     $isOnline = $false
     try {
         if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
@@ -379,27 +480,27 @@ function Show-Menu-IT {
 
     if ($isOnline -and (Test-Path "\\$ServerHost\Guest")) {
         try {
-            if (-not (Test-Path $NetworkPath)) { 
-                New-Item -Path $NetworkPath -ItemType Directory -Force | Out-Null 
+            if (-not (Test-Path $NetworkPath)) {
+                New-Item -Path $NetworkPath -ItemType Directory -Force | Out-Null
             }
             $NetworkFile = Join-Path $NetworkPath $FileName
             $HtmlContent | Set-Content $NetworkFile -Encoding UTF8 -Force
-        } catch { 
+        } catch {
             Write-Host "`n[ONLINE] WARNING → Có mạng nhưng folder mạng đang chặn quyền ghi file!" -ForegroundColor Red
         }
     } else {
         Write-Host "`n[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua luu ban backup tren server." -ForegroundColor DarkGray
     }
 # 🏁 KẾT THÚC EXPORT
-    
+
     Write-Host ("+" * $w) -ForegroundColor DarkGray
-    Write-Host "$m" -NoNewline    
-    Write-Host "`nUser vui lòng nhập " -NoNewline; 
-    Write-Host "115" -ForegroundColor Yellow -NoNewline; 
+    Write-Host "$m" -NoNewline
+    Write-Host "`nUser vui lòng nhập " -NoNewline;
+    Write-Host "115" -ForegroundColor Yellow -NoNewline;
     Write-Host " để được hỗ trợ nhanh: " -NoNewline
-	
+
 	$topMenu = Read-Host
-	
+
     switch ($topMenu) {
         "111" { GoTo-IT-111 }
         "115" { GoTo-IT-115 }
