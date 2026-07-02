@@ -648,7 +648,7 @@ function Show-Menu-IT {
     Write-Host ("+" * $w) -ForegroundColor DarkGray
     Write-Host "$m" -NoNewline
     Write-Host "`nUser vui lòng nhập " -NoNewline;
-    Write-Host "115" -ForegroundColor Yellow -NoNewline;
+    Write-Host "113" -ForegroundColor Yellow -NoNewline;
     Write-Host " để được hỗ trợ nhanh: " -NoNewline
 
 	$topMenu = Read-Host
