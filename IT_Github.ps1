@@ -1,4 +1,4 @@
-﻿# 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.1 --->>>
+# 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.1 --->>>
 
 param(
     [int]$PSWidth = 90,
