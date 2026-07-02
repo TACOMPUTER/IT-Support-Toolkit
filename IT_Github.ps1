@@ -1,5 +1,5 @@
 param(
-    [int]$PSWidth = 83,
+    [int]$PSWidth = 90,
     [int]$PSHeight = 58,
     [int]$PosX = -8,
     [int]$PosY = 0,
@@ -185,6 +185,64 @@ function Write-Log ($text, $color, $htmlClass = "") {
     if ($htmlClass) { $script:ReportLines += "<span class='$htmlClass'>$cleanText</span>" } else { $script:ReportLines += "$cleanText" }
 }
 
+$UI = @{
+    LabelWidth = 22	# Đẩy mũi tên di chuyển
+
+    Color1 = "Cyan"
+    Color2 = "Green"
+    Color3 = "Blue"
+
+    ValueColor = "Yellow"
+}
+
+function Show-Item {
+
+    param(
+        [ValidateSet(1,2,3)]
+        [int]$Level,
+
+        [string]$Label,
+
+        [string]$Value=""
+    )
+
+    switch($Level){
+
+        1{
+            Write-Log "$Label`n" $UI.Color1 "cyan"
+        }
+
+        2{
+            $prefix = "└─ "
+            $labelColor = $UI.Color2
+            $htmlClass  = "green"
+            $valueColor = $UI.ValueColor
+            $valueClass = "yellow"
+        }
+
+        3{
+            $prefix = "   └─ "
+            $labelColor = $UI.Color3
+            $htmlClass  = "blue"
+
+            # Level 3: Value cùng màu với Label
+            $valueColor = $UI.Color3
+            $valueClass = "blue"
+        }
+
+    }
+
+    if($Level -gt 1){
+
+        $fmt = "{0,-$($UI.LabelWidth)}"
+        $text = $fmt -f ($prefix + $Label)
+
+        Write-Log ($text + " → ") $labelColor $htmlClass
+        Write-Log "$Value`n" $valueColor $valueClass
+    }
+
+}
+
 function Run-IT-xxx {
     param([string]$ScriptPath)
     [WinAPI]::ShowWindow($consoleHandle, 2) # Minimize
@@ -230,26 +288,17 @@ function Show-Menu-IT {
 	$RunTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss (dddd)"
 	Write-Log "$m<<< $infoTitle >>>" "Cyan" "cyan"
 	Write-Log "$mRun at: $RunTime" "DarkGray" "gray"
-	Write-Log "`n" "" ""
-
-    function Show-Line ($l, $v) {
-        Write-Log ($m + "{0,-22} : " -f $l) "Green" "green"
-        Write-Log "$v`n" "Yellow" "yellow"
-    }
-    function Show-Sub ($l, $v) {
-        Write-Log ($m + "  {0,-20} → " -f $l) "Blue" "blue"
-        Write-Log "$v`n" "Blue" "blue"
-    }
+	Write-Log "`n"
 
 	Write-Log "`n"
 
-    Show-Line "MAINBOARD" ""
-	Show-Sub "Brand (OEM)" $CS.Manufacturer
-	Show-Sub "Manufacturer" $BB.Manufacturer
-	Show-Sub "Product" $BB.Product
-	Show-Sub "Model" $CS.Model
-	Show-Sub "Serial" $BIOS.SerialNumber
-	Show-Sub "BIOS ver" $BIOS.SMBIOSBIOSVersion
+    Show-Item 1 "MAINBOARD"
+	Show-Item 2 "Brand (OEM)" $CS.Manufacturer
+	Show-Item 2 "Manufacturer" $BB.Manufacturer
+	Show-Item 2 "Product" $BB.Product
+	Show-Item 2 "Model" $CS.Model
+	Show-Item 2 "Serial" $BIOS.SerialNumber
+	Show-Item 2 "BIOS ver" $BIOS.SMBIOSBIOSVersion
 
     # ===== CPU & RAM =====
     Write-Log "`n"
@@ -265,9 +314,11 @@ function Show-Menu-IT {
     $ramType = if ($memArrays | Where-Object { $_.MemoryErrorCorrection -in 5,6 }) { "ECC" } else { "Non-ECC" }
     $totalRAM = if ($RAM) { [math]::round(($RAM | Measure-Object Capacity -Sum).Sum / 1GB) } else { 0 }
 
-    Show-Line "CPU" "$totalCPU CPU"
-    Show-Line "RAM (TOTAL)" "$totalRAM GB ($ramType)"
-    Write-Log "`n" "" ""
+    Show-Item 1 "CPU"
+	Show-Item 2 "Total CPU(s)" "$totalCPU"
+	Show-Item 3 "Total RAM" "$totalRAM GB ($ramType)"
+
+	Write-Log "`n"
 
     $cpuIdx = 0
     foreach ($c in $cpuList) {
@@ -285,7 +336,16 @@ function Show-Menu-IT {
         $ramOutputLines = @()
 
         foreach ($r in $cpuRAM) {
-            $label = if ($r.DeviceLocator) { $r.DeviceLocator -replace "DIMM","Slot" -replace " ", "" } else { "Slot $($trueUsedSlots + 1)" }
+            $label = if ($r.DeviceLocator) {
+
+				($r.DeviceLocator -replace 'CPU\d+-','' -replace 'Node\d+-','' -replace 'DIMM','Slot' -replace ' ','')
+
+			}
+			else{
+
+				"Slot$($trueUsedSlots+1)"
+
+			}
             $size = [math]::round($r.Capacity/1GB)
             $manu = if ($r.Manufacturer) { $r.Manufacturer.Trim() } else { "Unknown" }
             $part = if ($r.PartNumber) { $r.PartNumber.Trim() } else { "Unknown" }
@@ -333,50 +393,77 @@ function Show-Menu-IT {
         } else { 0 }
 
         # 4. IN KẾT QUẢ RA CONSOLE
-        Show-Line "  CPU$cpuId" $cpuName
-        Show-Sub "└─ Total Memory" "$cpuTotalGB GB"
-
-        foreach ($ro in $ramOutputLines) {
-            Show-Sub "   └─ $($ro.Label)" $ro.Info
-        }
-
-        Show-Sub "   └─ Free/Total Slots" "$cpuFreeSlots / $cpuTotalSlots"
-        Write-Log "`n" "" ""
+        Show-Item 2 "CPU$cpuId" $cpuName
+        Show-Item 3 "Total RAM$cpuId" "$cpuTotalGB GB | $cpuFreeSlots/$cpuTotalSlots Slots Free"
+		
+		foreach ($ro in $ramOutputLines) {
+			Show-Item 3 $ro.Label $ro.Info
+		}
+        Write-Log "`n"
 
         $cpuIdx++ # Tăng tiến trình để đọc mảng Array tiếp theo cho CPU kế tiếp
     }
 
-	Write-Log "`n"
-
     $disks = Get-CimInstance Win32_DiskDrive
-    Show-Line "STORAGE (TOTAL)" "$([math]::round(($disks | Measure-Object Size -Sum).Sum / 1GB)) GB"
-    $i = 1; foreach ($d in $disks) { Show-Sub "Disk $i" "$($d.Model)  $([math]::round($d.Size/1GB)) GB"; $i++ }
+	Show-Item 1 "STORAGE"
+
+	$totalGB = [math]::Round(($disks | Measure-Object Size -Sum).Sum / 1GB)
+	Show-Item 2 "Total Capacity" ("{0:N0} GB" -f $totalGB)
+
+	$i = 1
+	foreach ($d in $disks) {
+		Show-Item 2 "Disk $i" "$($d.Model)"
+		$i++
+	}
 
 	Write-Log "`n"
 
 	$GPU = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
-	
-	Show-Line "DISPLAY ADAPTERS" "$($GPU.Count)"
-	
-	if ($GPU.Count -le 1) {
-	
-	    foreach ($g in $GPU) {
-	        Show-Sub "Adapter" $g.Name
-	    }
-	
-	}
-	else {
-	
-	    $i = 1
-	    foreach ($g in $GPU) {
-	        Show-Sub "Adapter $i" $g.Name
-	        $i++
-	    }
-	
+
+	Show-Item 1 "DISPLAY ADAPTERS"
+
+	$i = 1
+	foreach ($g in $GPU) {
+
+		$name = $g.Name
+
+		# VRAM
+		$vram = if ($g.AdapterRAM -gt 0) {
+			if ($g.AdapterRAM -ge 1GB) {
+				"{0:N0} GB" -f ($g.AdapterRAM / 1GB)
+			}
+			else {
+				"{0:N0} MB" -f ($g.AdapterRAM / 1MB)
+			}
+		}
+		else {
+			$null
+		}
+
+		# Resolution
+		$res = if ($g.CurrentHorizontalResolution -and $g.CurrentVerticalResolution) {
+			"$($g.CurrentHorizontalResolution)x$($g.CurrentVerticalResolution)"
+		}
+
+		if ($g.CurrentRefreshRate) {
+			$res += " @$($g.CurrentRefreshRate)Hz"
+		}
+
+		# Ghép chuỗi
+		$info = @($name)
+
+		if ($vram) { $info += $vram }
+		if ($res)  { $info += $res }
+
+		$label = if ($GPU.Count -eq 1) { "Adapter" } else { "Adapter $i" }
+
+		Show-Item 2 $label ($info -join " | ")
+
+		$i++
 	}
 
 	Write-Log "`n"
-	Show-Line "NETWORK ADAPTER" ""
+	Show-Item 1 "NETWORK ADAPTERS"
 
 	$net = Get-NetAdapter -Physical | Sort-Object Name
 
@@ -392,16 +479,22 @@ function Show-Menu-IT {
 		$status = if ($n.Status -eq 'Up') { "√ Up" } else { "X Down" }
 		$speed  = if ($n.LinkSpeed) { $n.LinkSpeed } else { "N/A" }
 
-		Show-Sub "$type Adapter" "$($n.InterfaceDescription) - $status"
-		Show-Sub "   └─ MAC " $n.MacAddress
-		Show-Sub "   └─ Speed" $speed
+		Show-Item 2 "$type Adapter" "$($n.InterfaceDescription) - $status | $speed"
+		Show-Item 3 "MAC" $n.MacAddress
 	}
 
 	Write-Log "`n"
-    Show-Line "WINDOWS" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | $($RegOS.CurrentBuild).$($RegOS.UBR)"
+    Show-Item 1 "WINDOWS"
+
+	# Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion)"
+	# Show-Item 2 "Build" "$($RegOS.CurrentBuild).$($RegOS.UBR)"
+	
+	Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | Build $($RegOS.CurrentBuild).$($RegOS.UBR)"
 
 	Write-Log "`n"
-    Show-Line "Current User" "$env:COMPUTERNAME\$env:USERNAME"
+    Show-Item 1 "COMPUTERNAME\USERNAME"
+
+	Show-Item 2 "Current" "$env:COMPUTERNAME\$env:USERNAME"
 
     # Xác định vị trí 113 để hiển thị
     $loc113 = if ($script:IT113Script) {
@@ -411,6 +504,8 @@ function Show-Menu-IT {
     } else { "Offline" }
 
 	Write-Log "`n"
+	
+	Show-Item 1 "113 LOCATION"
 
 	if ($script:IT113Online.Count) {
 
@@ -425,12 +520,12 @@ function Show-Menu-IT {
 
 		}
 
-		Show-Line "Current 113 online" ($online113 -join " | ")
+		Show-Item 2 "Online" ($online113 -join " | ")
 
 	}
 	else {
 
-		Show-Line "Current 113 online" "Offline"
+		Show-Item 2 "Offline"
 
 	}
 
@@ -446,20 +541,25 @@ function Show-Menu-IT {
 <meta charset="utf-8">
 <style>
     body {
-        font-family: 'Consolas', 'Lucida Console', monospace;
-        background-color: #0c0c0c;
-        color: #cccccc;
-        padding: 20px;
-    }
-    pre {
-        white-space: pre;
-        font-size: 14px;       /* Tăng cỡ chữ */
-        line-height: 1.5;      /* Tăng giãn dòng để thoáng hơn */
-    }
-    .green { color: #00ff00; }
-    .yellow { color: #ffff00; }
-    .blue { color: #3b8ec2; }
-    .cyan { color: #00ffff; }
+		margin: 0;
+		padding: 8px;
+		background: #0C0C0C;
+		color: #CCCCCC;
+		font-family: Consolas, "Lucida Console", monospace;
+	}
+
+	pre {
+		margin: 0;
+		white-space: pre;
+		font-family: inherit;
+		font-size: 13px;
+		line-height: 1.15;
+	}
+    .green  { color:#16C60C; }
+	.yellow { color:#F9F1A5; }
+	.blue   { color:#3B78FF; }
+	.cyan   { color:#61D6D6; }
+	.gray   { color:#767676; }
 </style>
 </head>
 <body><pre>$Content</pre></body>
