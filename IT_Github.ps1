@@ -358,8 +358,21 @@ function Show-Menu-IT {
 	
 	Show-Line "DISPLAY ADAPTERS" "$($GPU.Count)"
 	
-	foreach ($g in $GPU) {
-	    Show-Sub "Adapter" $g.Name
+	if ($GPU.Count -le 1) {
+	
+	    foreach ($g in $GPU) {
+	        Show-Sub "Adapter" $g.Name
+	    }
+	
+	}
+	else {
+	
+	    $i = 1
+	    foreach ($g in $GPU) {
+	        Show-Sub "Adapter $i" $g.Name
+	        $i++
+	    }
+	
 	}
 
 	Write-Log "`n"
