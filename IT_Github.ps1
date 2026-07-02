@@ -655,7 +655,6 @@ function Show-Menu-IT {
 
     switch ($topMenu) {
         "111" { GoTo-IT-111 }
-        "115" { GoTo-IT-115 }
         "113" { GoTo-IT-113 }
         default { return }
     }
