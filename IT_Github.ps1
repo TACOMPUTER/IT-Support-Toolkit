@@ -354,15 +354,13 @@ function Show-Menu-IT {
 
 	Write-Log "`n"
 
-	$vgaCount = 0; $gpuCount = 0
-    foreach ($g in $GPU) {
-        if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { $vgaCount++ } else { $gpuCount++ }
-    }
-    Show-Line "GRAPHICS" ("{0} VGA / {1} GPU" -f $vgaCount, $gpuCount)
-    foreach ($g in $GPU) {
-        $label = if ($g.Name -match "NVIDIA|AMD|Radeon|GeForce|RTX|GTX") { "VGA" } else { "GPU" }
-        Show-Sub $label $g.Name
-    }
+	$GPU = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
+	
+	Show-Line "DISPLAY ADAPTERS" "$($GPU.Count)"
+	
+	foreach ($g in $GPU) {
+	    Show-Sub "Adapter" $g.Name
+	}
 
 	Write-Log "`n"
 	Show-Line "NETWORK ADAPTER" ""
