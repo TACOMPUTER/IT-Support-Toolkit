@@ -23,23 +23,6 @@ $consoleHandle = [WinAPI]::GetConsoleWindow()
 
 
 # 🚩 <<<--- KHU VỰC KHAI BÁO BIẾN SỬ DỤNG TOÀN BỘ SCRIPT ---->>>
-# 1. Xác định vị trí gốc của file đang chạy (IT-113.ps1)
-# $PSScriptRoot là biến tự động của PowerShell chứa đường dẫn thư mục chứa file đang chạy
-$IT113Script = $PSScriptRoot 
-
-# 2. $LibScript: Thoát ra 1 cấp folder (IT-113) và vào 'Library'
-# Split-Path -Parent sẽ lấy thư mục cha của IT-113
-$LibScript = Join-Path (Split-Path $IT113Script -Parent) "Library"
-
-# 3. $ITScriptRoot: Vị trí folder 'cmd-Powershell' (Thoát ra 2 cấp: IT-113 -> IT -> cmd-Powershell)
-$ITScriptRoot = Split-Path (Split-Path $IT113Script -Parent) -Parent
-
-# 4. $IT115Script: Folder 'IT-115' (cùng cấp với IT-113)
-$IT115Script = Join-Path (Split-Path $IT113Script -Parent) "IT-115"
-
-
-
-
 	# thư mục software: thư mục gốc chứa file IT.ps1 (có thể là 'local' hoặc 'unc: \\server\share')
 if ($PSScriptRoot) {
     $BasePath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
