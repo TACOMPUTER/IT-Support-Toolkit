@@ -1,3 +1,5 @@
+# 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.1 --->>>
+
 param(
     [int]$PSWidth = 90,
     [int]$PSHeight = 58,
@@ -6,7 +8,6 @@ param(
     [bool]$SkipAdminCheck = $false
 )
 
-# 1. Khai báo WINAPI sớm
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -18,7 +19,13 @@ public class WinAPI {
     public struct RECT { public int Left, Top, Right, Bottom; }
 }
 "@
+
 $consoleHandle = [WinAPI]::GetConsoleWindow()
+
+# 🏁 <<<--- END THÔNG SỐ CỬA SỔ PS P.1 --->>>
+
+
+
 
 # 🚩 <<<--- CHỈ CHO 1 SCRIPT CHẠY --->>>
 
@@ -43,9 +50,12 @@ Get-Process powershell | Where-Object {
     }
 }
 
-# 🏁 <<<--- END --->>>
+# 🏁 <<<--- END CHỈ CHO 1 SCRIPT CHẠY --->>>
 
-# 2. XÁC ĐỊNH PATH & ADMIN
+
+
+# 🚩 <<<--- NÂNG QUYỀN ADMIN CHO SCRIPT ĐANG CHẠY --->>>
+
 $script:MainScript = if ($PSCommandPath) { $PSCommandPath } else { $MyInvocation.MyCommand.Path }
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -55,11 +65,17 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
     exit
 }
 
-# 3. SET WINDOW TITLE (Sửa cú pháp tại đây)
+# 🏁 <<<--- END NÂNG QUYỀN ADMIN CHO SCRIPT ĐANG CHẠY --->>>
+
+
+
+# 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.2 --->>>
+
+# Title Window
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
 $host.UI.RawUI.WindowTitle = "Running '" + (Split-Path $script:MainScript -Leaf) + "' $adminText <<< IT_Github.ps1"
 
-# 4. RESIZE & MOVE
+# Resize Window
 $handle = [WinAPI]::GetConsoleWindow()
 
 try {
@@ -83,21 +99,25 @@ try {
     Write-Warning "Không thể thay đổi kích thước Window/Buffer. Đang dùng kích thước mặc định."
 }
 
-# 5. MoveWindow
+# Move Window
 $rect = New-Object WinAPI+RECT
 [WinAPI]::GetWindowRect($handle, [ref]$rect)
 $wPx = $rect.Right - $rect.Left
 $hPx = $rect.Bottom - $rect.Top
 [WinAPI]::MoveWindow($handle, $PosX, $PosY, $wPx, $hPx, $true) | Out-Null
 
-# ==========================================================
-# XÁC ĐỊNH VỊ TRÍ IT-113.ps1 (THEO THỨ TỰ ƯU TIÊN)
-#
+# 🏁 <<<--- END THÔNG SỐ CỬA SỔ PS P.2 --->>>
+
+
+
+
+# 🚩 <<<--- XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
+
+# Thứ tự ưu tiên như sau:
 # 1. D:\~H:\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113
 # 2. \\IT\Software\OS Tools\cmd-Powershell\IT\IT-113
 # 3. \\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113
 # 4. Tất cả ổ USB (Flash/HDD/SSD)
-# ==========================================================
 
 $script:IT113Script = $null
 $script:IT113Online = @()
@@ -178,6 +198,12 @@ foreach ($file in $SearchList) {
     }
 }
 
+# 🏁 <<<--- END XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
+
+
+
+# 🚩 <<<--- FUNCTION CHO THÔNG SỐ CẤU HÌNH MÁY TÍNH --->>>
+
 $script:ReportLines = @()
 function Write-Log ($text, $color, $htmlClass = "") {
     if ($color) { Write-Host $text -ForegroundColor $color -NoNewline } else { Write-Host $text -NoNewline }
@@ -243,6 +269,12 @@ function Show-Item {
 
 }
 
+# 🏁 <<<--- END FUNCTION CHO THÔNG SỐ CẤU HÌNH MÁY TÍNH --->>>
+
+
+
+# 🚩 <<<--- THU NHỎ CỬA SỔ HIỆN TẠI VÀ GỌI FILE .PS1 KHÁC --->>>
+
 function Run-IT-xxx {
     param([string]$ScriptPath)
     [WinAPI]::ShowWindow($consoleHandle, 2) # Minimize
@@ -250,21 +282,21 @@ function Run-IT-xxx {
     [WinAPI]::ShowWindow($consoleHandle, 9) # Restore
 }
 
-# ===== 3. HÀM HIỂN THỊ =====
+# 🏁 <<<--- END THU NHỎ CỬA SỔ HIỆN TẠI VÀ GỌI FILE .PS1 KHÁC --->>>
+
+# 🚩 <<<--- FUNCTION HIỂN THỊ NỘI DUNG LÊN CONSOLE --->>>
+
 function Show-Menu-IT {
     $script:ReportLines = @() # Reset báo cáo mỗi lần chạy
-    Clear-Host
 
-    # ---------------------------------------------------------
-    # 🚩 SỬA TẠI ĐÂY: AUTO THEO BỀ RỘNG CỬA SỔ
+	Clear-Host
+
     # Trừ đi 1 để tránh việc bị rớt dòng (line-wrap) nếu Console xuất hiện thanh cuộn dọc
     $w = $host.UI.RawUI.WindowSize.Width - 1
 
-    # (Tùy chọn) Nếu bạn muốn ép cứng luôn bằng đúng tham số cấu hình ban đầu thì đổi thành:
-    # $w = $PSWidth
-    # ---------------------------------------------------------
+    $m = " " # Margin lề trái cửa sổ 2 khoảng trắng
 
-    $m = " " # Margin 2 khoảng trắng
+	# 🚩 <<<--- XUẤT THÔNG SỐ CẤU HÌNH MÁY TÍNH LÊN CONSOLE --->>>
 
     # Nhận dạng Laptop/PC
 	$IsLaptop = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
@@ -292,6 +324,7 @@ function Show-Menu-IT {
 
 	Write-Log "`n"
 
+	# ===== MAINBOARD =====
     Show-Item 1 "MAINBOARD"
 	Show-Item 2 "Brand (OEM)" $CS.Manufacturer
 	Show-Item 2 "Manufacturer" $BB.Manufacturer
@@ -395,7 +428,7 @@ function Show-Menu-IT {
         # 4. IN KẾT QUẢ RA CONSOLE
         Show-Item 2 "CPU$cpuId" $cpuName
         Show-Item 3 "Total RAM$cpuId" "$cpuTotalGB GB | $cpuFreeSlots/$cpuTotalSlots Slots Free"
-		
+
 		foreach ($ro in $ramOutputLines) {
 			Show-Item 3 $ro.Label $ro.Info
 		}
@@ -404,7 +437,8 @@ function Show-Menu-IT {
         $cpuIdx++ # Tăng tiến trình để đọc mảng Array tiếp theo cho CPU kế tiếp
     }
 
-    $disks = Get-CimInstance Win32_DiskDrive
+    # ===== STORAGE =====
+	$disks = Get-CimInstance Win32_DiskDrive
 	Show-Item 1 "STORAGE"
 
 	$totalGB = [math]::Round(($disks | Measure-Object Size -Sum).Sum / 1GB)
@@ -418,6 +452,7 @@ function Show-Menu-IT {
 
 	Write-Log "`n"
 
+	# ===== DISPLAY ADAPTERS =====
 	$GPU = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
 
 	Show-Item 1 "DISPLAY ADAPTERS"
@@ -463,6 +498,8 @@ function Show-Menu-IT {
 	}
 
 	Write-Log "`n"
+
+	# ===== NETWORK ADAPTERS =====
 	Show-Item 1 "NETWORK ADAPTERS"
 
 	$net = Get-NetAdapter -Physical | Sort-Object Name
@@ -484,19 +521,20 @@ function Show-Menu-IT {
 	}
 
 	Write-Log "`n"
-    Show-Item 1 "WINDOWS"
 
-	# Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion)"
-	# Show-Item 2 "Build" "$($RegOS.CurrentBuild).$($RegOS.UBR)"
-	
+	# ===== WINDOWS =====
+	Show-Item 1 "WINDOWS"
+
 	Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | Build $($RegOS.CurrentBuild).$($RegOS.UBR)"
 
 	Write-Log "`n"
+
+	# ===== COMPUTERNAME\USERNAME =====
     Show-Item 1 "COMPUTERNAME\USERNAME"
 
 	Show-Item 2 "Current" "$env:COMPUTERNAME\$env:USERNAME"
 
-    # Xác định vị trí 113 để hiển thị
+    # ===== 113 LOCATION =====
     $loc113 = if ($script:IT113Script) {
         if ($script:IT113Script -match '^\\\\[^\\]+') { ($matches[0]) } # Lấy \\IT hoặc \\IT-E580
         elseif ($script:IT113Script -match '^[a-zA-Z]:') { ($matches[0]) } # Lấy DriverLetter:
@@ -504,7 +542,7 @@ function Show-Menu-IT {
     } else { "Offline" }
 
 	Write-Log "`n"
-	
+
 	Show-Item 1 "113 LOCATION"
 
 	if ($script:IT113Online.Count) {
@@ -529,7 +567,10 @@ function Show-Menu-IT {
 
 	}
 
-	# 🚩 EXPORT HTML (TỐI ƯU: LUÔN LUÔN GHI LOCAL + TỰ ĐỘNG ĐẨY SERVER NẾU ONLINE)
+	# 🏁 <<<--- END XUẤT THÔNG SỐ CẤU HÌNH MÁY TÍNH LÊN CONSOLE --->>>
+
+	# 🚩 <<<--- XUẤT THÔNG SỐ CẤU HÌNH MÁY TÍNH RA HTML VÀO LOCAL và NETWORK --->>>
+
     $Serial = $BIOS.SerialNumber
     $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
     $Content = $script:ReportLines -join ""
@@ -602,7 +643,7 @@ function Show-Menu-IT {
     } else {
         Write-Host "`n[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua luu ban backup tren server." -ForegroundColor DarkGray
     }
-# 🏁 KẾT THÚC EXPORT
+# 🏁 <<<--- END XUẤT THÔNG SỐ CẤU HÌNH MÁY TÍNH RA HTML VÀO LOCAL và NETWORK --->>>
 
     Write-Host ("+" * $w) -ForegroundColor DarkGray
     Write-Host "$m" -NoNewline
