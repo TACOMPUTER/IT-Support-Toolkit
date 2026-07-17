@@ -595,22 +595,6 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 		Show-Item 2 "Edition" $product.Name
 		Show-Item 2 "Status" "$channel | **** $partialKey | $statusText"
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	# Show-Item 1 "WINDOWS"
-	# Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | Build $($RegOS.CurrentBuild).$($RegOS.UBR)"
-	# Show-Item 2 "Status" "$partialKey | $statusText"
 
 	Write-Log "`n"
 
