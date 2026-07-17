@@ -212,7 +212,7 @@ function Write-Log ($text, $color, $htmlClass = "") {
 }
 
 $UI = @{
-    LabelWidth = 22	# Đẩy mũi tên di chuyển
+    LabelWidth = 20	# Đẩy mũi tên di chuyển
 
     Color1 = "Cyan"
     Color2 = "Green"
@@ -313,8 +313,7 @@ function Show-Menu-IT {
 
     $CS = Get-CimInstance Win32_ComputerSystem; $BB = Get-CimInstance Win32_BaseBoard
     $CPU = Get-CimInstance Win32_Processor; $RAM = Get-CimInstance Win32_PhysicalMemory
-    $BIOS = Get-CimInstance Win32_BIOS; $GPU = Get-CimInstance Win32_VideoController
-    $RegOS = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+    $BIOS = Get-CimInstance Win32_BIOS; $GPU = Get-CimInstance Win32_VideoController    
 
     # Thêm Timestamp
 	$RunTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss (dddd)"
@@ -522,10 +521,96 @@ function Show-Menu-IT {
 
 	Write-Log "`n"
 
-	# ===== WINDOWS =====
-	Show-Item 1 "WINDOWS"
+	# ===== CHECK LICENSED MICROSOFT =====
+	
+	# Truy vấn thông tin phần mềm Microsoft
+	$RegOS = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+	
+	$activeProduct = Get-CimInstance -Query @"
+SELECT Name, Description, LicenseStatus,
+GracePeriodRemaining, PartialProductKey
+FROM SoftwareLicensingProduct
+WHERE PartialProductKey IS NOT NULL
+AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
+"@
+	
+	# Phải khai $null thì mới trích 5 ký tự cuối key
+	$partialKey = $null	
+	
+	# Lấy riêng Windows và Office
+	$windows = $activeProduct | Where-Object {
+		$_.Description -like "*Windows*"
+	}
 
-	Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | Build $($RegOS.CurrentBuild).$($RegOS.UBR)"
+	$offices = $activeProduct | Where-Object {
+		$_.Description -like "*Office*"
+	}
+		
+	foreach ($product in $windows) {
+
+		$partialKey = $product.PartialProductKey
+
+		$statusText = switch ($product.LicenseStatus) {
+			0 { "Unlicensed" }
+			1 { "Licensed (Permanently Activated)" }
+			2 { "OOB Grace Period" }
+			3 { "OOT Grace Period" }
+			4 { "Non-Genuine Grace Period" }
+			5 { "Notification Mode" }
+			6 { "Extended Grace Period" }
+			default { "Unknown" }
+		}
+
+		$channel = switch -Regex ($product.Description) {
+			'RETAIL'           { 'RETAIL'; break }
+			'OEM'              { 'OEM'; break }
+			'VOLUME_KMSCLIENT' { 'KMS'; break }
+			'VOLUME_MAK'       { 'MAK'; break }
+			default            { 'Unknown' }
+		}
+
+		Show-Item 1 "WINDOWS"
+		Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | Build $($RegOS.CurrentBuild).$($RegOS.UBR)"
+		Show-Item 2 "Status" "$channel | **** $partialKey | $statusText"
+	}
+	
+	foreach ($product in $offices) {
+
+		$partialKey = $product.PartialProductKey
+
+		$statusText = switch ($product.LicenseStatus) {
+			0 { "Unlicensed" }
+			1 { "Licensed (Permanently Activated)" }
+			2 { "OOB Grace Period" }
+			3 { "OOT Grace Period" }
+			4 { "Non-Genuine Grace Period" }
+			5 { "Notification Mode" }
+			6 { "Extended Grace Period" }
+			default { "Unknown" }
+		}
+
+		$channel = ($product.Description -split ',\s*')[-1] -replace '\s+channel$',''
+
+		Show-Item 1 "OFFICE"
+		Show-Item 2 "Edition" $product.Name
+		Show-Item 2 "Status" "$channel | **** $partialKey | $statusText"
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	# Show-Item 1 "WINDOWS"
+	# Show-Item 2 "Edition" "$($RegOS.ProductName) | $($RegOS.DisplayVersion) | Build $($RegOS.CurrentBuild).$($RegOS.UBR)"
+	# Show-Item 2 "Status" "$partialKey | $statusText"
 
 	Write-Log "`n"
 
