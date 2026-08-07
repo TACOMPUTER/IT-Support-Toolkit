@@ -725,6 +725,7 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
     switch ($topMenu) {
         "111" { GoTo-IT-111 }
         "113" { GoTo-IT-113 }
+		"VPN" { GoTo-IT-VPN }
         default { return }
     }
 }
@@ -744,6 +745,11 @@ function GoTo-IT-113 {
         Write-Host "`n→ Công cụ 113 hiện không khả dụng!" -ForegroundColor Red
         Start-Sleep -Seconds 2
     }
+}
+
+function GoTo-IT-VPN {
+    
+	Start-Process -FilePath "$ITScriptRoot\SFX.EXE\VPN_L2TP-PSK.exe"
 }
 
 while ($true) {
