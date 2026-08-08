@@ -83,31 +83,7 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
 
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
 
-if ([string]::IsNullOrWhiteSpace($script:MainScript)) {
-
-    # Chạy trực tiếp từ GitHub (irm | iex)
-    $mainScriptName = "Github"
-
-}
-else {
-
-    $mainScriptPath = $script:MainScript
-
-    # UNC path: \\IT\...
-    if ($mainScriptPath -like "\\*") {
-
-        $mainScriptName = $mainScriptPath.Substring(2).Split('\')[0]
-        $mainScriptName = "\\$mainScriptName"
-
-    }
-    else {
-
-        # Local drive: C:\..., D:\...
-        $mainScriptName = Split-Path $mainScriptPath -Qualifier
-    }
-}
-
-$host.UI.RawUI.WindowTitle = "Running 'IT_Github.ps1' $adminText <<< '$mainScriptName'"
+$host.UI.RawUI.WindowTitle = "Running 'IT_Github.ps1' $adminText from 'Github'"
 
 # Resize Window
 $handle = [WinAPI]::GetConsoleWindow()
