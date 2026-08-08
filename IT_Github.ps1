@@ -748,8 +748,435 @@ function GoTo-IT-113 {
 }
 
 function GoTo-IT-VPN {
+    # Load WinForms Assemblies
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    [System.Windows.Forms.Application]::EnableVisualStyles()
+
+    # 2. Cấu hình Registry L2TP UDP Encapsulation (Nếu chưa có)
+    $regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\PolicyAgent"
+    try {
+        $currentVal = (Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue).AssumeUDPEncapsulationContextOnSendRule
+        if ($currentVal -ne 2) {
+            New-ItemProperty -Path $regPath -Name "AssumeUDPEncapsulationContextOnSendRule" -PropertyType DWORD -Value 2 -Force | Out-Null
+        }
+    } catch {}
+
+    # 3. Khởi tạo Form chính (Tối ưu độ cao cho màn hình Laptop)
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "TẠO / QUẢN LÝ VPN L2TP OVER IPSEC by TACOMPUTER"
+    $form.Size = New-Object System.Drawing.Size(520, 650)
+    $form.StartPosition = "CenterScreen"
+    $form.FormBorderStyle = "FixedSingle"
+    $form.MaximizeBox = $false
+    $form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $form.BackColor = [System.Drawing.Color]::FromArgb(245, 247, 250)
+
+    # Tiêu đề Form
+    $lblTitle = New-Object System.Windows.Forms.Label
+    $lblTitle.Text = "TẠO / QUẢN LÝ VPN L2TP/IPsec DrayTek"
+    $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $lblTitle.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
+    $lblTitle.Size = New-Object System.Drawing.Size(480, 25)
+    $lblTitle.Location = New-Object System.Drawing.Point(10, 10)
+    $lblTitle.TextAlign = "MiddleCenter"
+    $form.Controls.Add($lblTitle)
+
+    # Group: Nhập thông tin (Thu gọn khoảng cách)
+    $grpInput = New-Object System.Windows.Forms.GroupBox
+    $grpInput.Text = " Thông tin cấu hình "
+    $grpInput.Location = New-Object System.Drawing.Point(15, 38)
+    $grpInput.Size = New-Object System.Drawing.Size(475, 192)
+    $form.Controls.Add($grpInput)
+
+    # Các Field Nhập liệu cơ bản (Tất cả để trống mặc định)
+    function Create-LabelInput ($parent, $text, $yPos, $isPass = $false) {
+        $lbl = New-Object System.Windows.Forms.Label
+        $lbl.Text = $text
+        $lbl.Location = New-Object System.Drawing.Point(15, $yPos)
+        $lbl.Size = New-Object System.Drawing.Size(120, 23)
+        $lbl.TextAlign = "MiddleLeft"
+        $parent.Controls.Add($lbl)
+
+        $txt = New-Object System.Windows.Forms.TextBox
+        $txt.Text = ""
+        $txt.Location = New-Object System.Drawing.Point(140, $yPos)
+        $txt.Size = New-Object System.Drawing.Size(315, 25)
+        if ($isPass) { $txt.PasswordChar = '*' }
+        $parent.Controls.Add($txt)
+        return $txt
+    }
+
+    # 1. Tên VPN (Để trống)
+    $txtVPNName = Create-LabelInput $grpInput "Tên VPN:" 22
+
+    # 2. Máy chủ VPN (Tách 2 phần: TextBox bên trái + Dropdown đuôi tên miền bên phải)
+    $lblServer = New-Object System.Windows.Forms.Label
+    $lblServer.Text = "Máy chủ VPN:"
+    $lblServer.Location = New-Object System.Drawing.Point(15, 55)
+    $lblServer.Size = New-Object System.Drawing.Size(120, 23)
+    $lblServer.TextAlign = "MiddleLeft"
+    $grpInput.Controls.Add($lblServer)
+
+    # TextBox nhập tên máy chủ
+    $txtServer = New-Object System.Windows.Forms.TextBox
+    $txtServer.Text = ""
+    $txtServer.Location = New-Object System.Drawing.Point(140, 55)
+    $txtServer.Size = New-Object System.Drawing.Size(190, 25)
+    $grpInput.Controls.Add($txtServer)
+
+    # Dropdown đuôi tên miền (Chừa vừa đủ cho đuôi tên miền)
+    $cmbServerSuffix = New-Object System.Windows.Forms.ComboBox
+    $cmbServerSuffix.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    $cmbServerSuffix.Location = New-Object System.Drawing.Point(335, 55)
+    $cmbServerSuffix.Size = New-Object System.Drawing.Size(120, 25)
+    [void]$cmbServerSuffix.Items.Add("")
+    [void]$cmbServerSuffix.Items.Add(".ddns.net")
+    [void]$cmbServerSuffix.Items.Add(".synology.me")
+    [void]$cmbServerSuffix.Items.Add(".drayddns.com")
+    $cmbServerSuffix.SelectedIndex = 0  # Mặc định dòng trống
+    $grpInput.Controls.Add($cmbServerSuffix)
+
+    # 3, 4, 5. Tài khoản, Mật khẩu, PSK (Tất cả để trống)
+    $txtUser = Create-LabelInput $grpInput "Tài khoản VPN:" 88
+    $txtPass = Create-LabelInput $grpInput "Mật khẩu:" 121 $true
+    $txtPSK  = Create-LabelInput $grpInput "Pre Shared Key:" 154 $true
+
+    # Nút Thao tác Cấu hình
+    $btnCreate = New-Object System.Windows.Forms.Button
+    $btnCreate.Text = "Tạo VPN"
+    $btnCreate.Location = New-Object System.Drawing.Point(15, 238)
+    $btnCreate.Size = New-Object System.Drawing.Size(105, 32)
+    $btnCreate.BackColor = [System.Drawing.Color]::FromArgb(37, 99, 235)
+    $btnCreate.ForeColor = [System.Drawing.Color]::White
+    $btnCreate.FlatStyle = "Flat"
+    $form.Controls.Add($btnCreate)
+
+    $btnRefresh = New-Object System.Windows.Forms.Button
+    $btnRefresh.Text = "Refresh VPN"
+    $btnRefresh.Location = New-Object System.Drawing.Point(130, 238)
+    $btnRefresh.Size = New-Object System.Drawing.Size(105, 32)
+    $form.Controls.Add($btnRefresh)
+
+    $btnOpenSettings = New-Object System.Windows.Forms.Button
+    $btnOpenSettings.Text = "Mở Settings VPN"
+    $btnOpenSettings.Location = New-Object System.Drawing.Point(245, 238)
+    $btnOpenSettings.Size = New-Object System.Drawing.Size(125, 32)
+    $form.Controls.Add($btnOpenSettings)
+
+    $btnDelete = New-Object System.Windows.Forms.Button
+    $btnDelete.Text = "Xóa VPN"
+    $btnDelete.Location = New-Object System.Drawing.Point(380, 238)
+    $btnDelete.Size = New-Object System.Drawing.Size(110, 32)
+    $btnDelete.BackColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
+    $btnDelete.ForeColor = [System.Drawing.Color]::White
+    $btnDelete.FlatStyle = "Flat"
+    $form.Controls.Add($btnDelete)
+
+    # Group: Quản lý VPN hiện có
+    $grpManage = New-Object System.Windows.Forms.GroupBox
+    $grpManage.Text = " Danh sách & Trạng thái VPN "
+    $grpManage.Location = New-Object System.Drawing.Point(15, 278)
+    $grpManage.Size = New-Object System.Drawing.Size(475, 210)
+    $form.Controls.Add($grpManage)
+
+    $lblCombo = New-Object System.Windows.Forms.Label
+    $lblCombo.Text = "Danh sách VPN hiện có:"
+    $lblCombo.Location = New-Object System.Drawing.Point(15, 22)
+    $lblCombo.Size = New-Object System.Drawing.Size(200, 20)
+    $grpManage.Controls.Add($lblCombo)
+
+    $cmbVPNList = New-Object System.Windows.Forms.ComboBox
+    $cmbVPNList.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    $cmbVPNList.Location = New-Object System.Drawing.Point(15, 43)
+    $cmbVPNList.Size = New-Object System.Drawing.Size(440, 25)
+    $grpManage.Controls.Add($cmbVPNList)
+
+    # Labels Thông tin chi tiết
+    $lblStatusTitle = New-Object System.Windows.Forms.Label
+    $lblStatusTitle.Text = "Trạng thái:"
+    $lblStatusTitle.Location = New-Object System.Drawing.Point(15, 78)
+    $lblStatusTitle.Size = New-Object System.Drawing.Size(80, 20)
+    $grpManage.Controls.Add($lblStatusTitle)
+
+    $lblStatusValue = New-Object System.Windows.Forms.Label
+    $lblStatusValue.Text = "Chưa rõ"
+    $lblStatusValue.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $lblStatusValue.ForeColor = [System.Drawing.Color]::Gray
+    $lblStatusValue.Location = New-Object System.Drawing.Point(100, 78)
+    $lblStatusValue.Size = New-Object System.Drawing.Size(350, 20)
+    $grpManage.Controls.Add($lblStatusValue)
+
+    $lblServerTitle = New-Object System.Windows.Forms.Label
+    $lblServerTitle.Text = "Máy chủ:"
+    $lblServerTitle.Location = New-Object System.Drawing.Point(15, 100)
+    $lblServerTitle.Size = New-Object System.Drawing.Size(80, 20)
+    $grpManage.Controls.Add($lblServerTitle)
+
+    $lblServerValue = New-Object System.Windows.Forms.Label
+    $lblServerValue.Text = "---"
+    $lblServerValue.Location = New-Object System.Drawing.Point(100, 100)
+    $lblServerValue.Size = New-Object System.Drawing.Size(350, 20)
+    $grpManage.Controls.Add($lblServerValue)
+
+    $lblTypeTitle = New-Object System.Windows.Forms.Label
+    $lblTypeTitle.Text = "Loại:"
+    $lblTypeTitle.Location = New-Object System.Drawing.Point(15, 122)
+    $lblTypeTitle.Size = New-Object System.Drawing.Size(80, 20)
+    $grpManage.Controls.Add($lblTypeTitle)
+
+    $lblTypeValue = New-Object System.Windows.Forms.Label
+    $lblTypeValue.Text = "L2TP/IPsec"
+    $lblTypeValue.Location = New-Object System.Drawing.Point(100, 122)
+    $lblTypeValue.Size = New-Object System.Drawing.Size(350, 20)
+    $grpManage.Controls.Add($lblTypeValue)
+
+    $btnConnect = New-Object System.Windows.Forms.Button
+    $btnConnect.Text = "Kết nối VPN"
+    $btnConnect.Location = New-Object System.Drawing.Point(15, 155)
+    $btnConnect.Size = New-Object System.Drawing.Size(440, 36)
+    $btnConnect.BackColor = [System.Drawing.Color]::FromArgb(22, 163, 74)
+    $btnConnect.ForeColor = [System.Drawing.Color]::White
+    $btnConnect.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnConnect.FlatStyle = "Flat"
+    $grpManage.Controls.Add($btnConnect)
+
+    # Group: Nhật ký (Thu gọn khoảng 5 dòng + Thanh cuộn ScrollBar)
+    $lblLog = New-Object System.Windows.Forms.Label
+    $lblLog.Text = "Nhật ký:"
+    $lblLog.Location = New-Object System.Drawing.Point(15, 496)
+    $lblLog.Size = New-Object System.Drawing.Size(100, 18)
+    $form.Controls.Add($lblLog)
+
+    $txtLog = New-Object System.Windows.Forms.RichTextBox
+    $txtLog.Location = New-Object System.Drawing.Point(15, 516)
+    $txtLog.Size = New-Object System.Drawing.Size(475, 80) # Khoảng 5 dòng
+    $txtLog.ReadOnly = $true
+    $txtLog.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::ForcedVertical
+    $txtLog.BackColor = [System.Drawing.Color]::FromArgb(30, 41, 59)
+    $txtLog.ForeColor = [System.Drawing.Color]::FromArgb(226, 232, 240)
+    $txtLog.Font = New-Object System.Drawing.Font("Consolas", 8.5)
+    $form.Controls.Add($txtLog)
+
+    # -------------------------------------------------------------------
+    # LOGIC VÀ XỬ LÝ SỰ KIỆN
+    # -------------------------------------------------------------------
+
+    function Write-VPNLog ($message) {
+        $time = Get-Date -Format "HH:mm:ss"
+        $txtLog.AppendText("[$time] $message`n")
+        $txtLog.SelectionStart = $txtLog.Text.Length
+        $txtLog.ScrollToCaret()
+    }
+
+    function Refresh-VPNList ($selectName = $null) {
+        $cmbVPNList.Items.Clear()
+        $vpns = Get-VpnConnection -AllUserConnection -ErrorAction SilentlyContinue
     
-	Start-Process -FilePath "$ITScriptRoot\SFX.EXE\VPN_L2TP-PSK.exe"
+        if ($vpns) {
+            foreach ($v in $vpns) {
+                [void]$cmbVPNList.Items.Add($v.Name)
+            }
+            if ($selectName -and $cmbVPNList.Items.Contains($selectName)) {
+                $cmbVPNList.SelectedItem = $selectName
+            } else {
+                $cmbVPNList.SelectedIndex = 0
+            }
+        } else {
+            $lblStatusValue.Text = "Không có VPN"
+            $lblStatusValue.ForeColor = [System.Drawing.Color]::Gray
+            $lblServerValue.Text = "---"
+            $btnConnect.Text = "Kết nối VPN"
+            $btnConnect.BackColor = [System.Drawing.Color]::FromArgb(22, 163, 74)
+        }
+    }
+
+    function Update-SelectedVPNInfo {
+        $selected = $cmbVPNList.SelectedItem
+        if (-not $selected) { return }
+
+        $vpn = Get-VpnConnection -Name $selected -AllUserConnection -ErrorAction SilentlyContinue
+        if ($vpn) {
+            $lblServerValue.Text = $vpn.ServerAddress
+            $lblTypeValue.Text = "$($vpn.TunnelType) (PSK)"
+
+            if ($vpn.ConnectionStatus -eq "Connected") {
+                $lblStatusValue.Text = "Connected"
+                $lblStatusValue.ForeColor = [System.Drawing.Color]::Green
+                $btnConnect.Text = "Ngắt kết nối VPN"
+                $btnConnect.BackColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
+            } else {
+                $lblStatusValue.Text = "Disconnected"
+                $lblStatusValue.ForeColor = [System.Drawing.Color]::Red
+                $btnConnect.Text = "Kết nối VPN"
+                $btnConnect.BackColor = [System.Drawing.Color]::FromArgb(22, 163, 74)
+            }
+        }
+    }
+
+    # Sự kiện khi thay đổi VPN trong Dropdown
+    $cmbVPNList.Add_SelectedIndexChanged({
+        Update-SelectedVPNInfo
+    })
+
+    # Nút Refresh VPN
+    $btnRefresh.Add_Click({
+        Refresh-VPNList $cmbVPNList.SelectedItem
+        Write-VPNLog "Đã cập nhật danh sách VPN."
+    })
+
+    # Nút Mở Settings VPN
+    $btnOpenSettings.Add_Click({
+        Start-Process "ms-settings:network-vpn"
+        Write-VPNLog "Đã mở Settings > VPN."
+    })
+
+    # Nút Tạo VPN
+    $btnCreate.Add_Click({
+        $name = $txtVPNName.Text.Trim()
+        $serverInput = $txtServer.Text.Trim()
+        $suffix = $cmbServerSuffix.SelectedItem
+        $server = "$serverInput$suffix"
+
+        $user = $txtUser.Text.Trim()
+        $pass = $txtPass.Text
+        $psk = $txtPSK.Text
+
+        if ([string]::IsNullOrWhiteSpace($name) -or [string]::IsNullOrWhiteSpace($serverInput) -or [string]::IsNullOrWhiteSpace($psk)) {
+            [System.Windows.Forms.MessageBox]::Show("Vui lòng nhập đầy đủ Tên VPN, Máy chủ VPN và Pre Shared Key!", "Thiếu thông tin", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+            return
+        }
+
+        Write-VPNLog "Đang tạo VPN '$name' ($server)..."
+
+        # Xóa VPN cũ nếu trùng tên
+        Get-VpnConnection -AllUserConnection -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $name } | ForEach-Object {
+            Remove-VpnConnection -Name $_.Name -AllUserConnection -Force -ErrorAction SilentlyContinue
+        }
+
+        try {
+            # Tạo kết nối VPN
+            Add-VpnConnection -Name $name `
+                              -ServerAddress $server `
+                              -TunnelType L2tp `
+                              -L2tpPsk $psk `
+                              -AuthenticationMethod MSChapv2 `
+                              -EncryptionLevel Optional `
+                              -SplitTunneling:$false `
+                              -RememberCredential `
+                              -AllUserConnection `
+                              -Force -ErrorAction Stop
+
+            # Lưu tài khoản đăng nhập vào Windows Credential
+            if (-not [string]::IsNullOrWhiteSpace($user) -and -not [string]::IsNullOrWhiteSpace($pass)) {
+                cmdkey /generic:"$server" /user:"$user" /pass:"$pass" | Out-Null
+            }
+
+            Write-VPNLog "Đã tạo VPN $name thành công."
+            Refresh-VPNList $name
+            [System.Windows.Forms.MessageBox]::Show("Tạo VPN '$name' thành công!", "Thông báo", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        } catch {
+            Write-VPNLog "Lỗi tạo VPN: $_"
+            [System.Windows.Forms.MessageBox]::Show("Có lỗi xảy ra khi tạo VPN: $_", "Lỗi", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        }
+    })
+
+    # Nút Xóa VPN
+    $btnDelete.Add_Click({
+        $selected = $cmbVPNList.SelectedItem
+        if (-not $selected) {
+            [System.Windows.Forms.MessageBox]::Show("Vui lòng chọn VPN cần xóa từ danh sách!", "Thông báo", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+            return
+        }
+
+        $confirm = [System.Windows.Forms.MessageBox]::Show("Bạn có chắc chắn muốn xóa VPN '$selected'?", "Xác nhận xóa", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+        if ($confirm -eq [System.Windows.Forms.DialogResult]::Yes) {
+            Write-VPNLog "Đang xóa VPN '$selected'..."
+
+            # Ngắt kết nối nếu đang kết nối
+            rasdial /disconnect | Out-Null
+
+            # Lấy server để xóa cmdkey
+            $vpn = Get-VpnConnection -Name $selected -AllUserConnection -ErrorAction SilentlyContinue
+            if ($vpn) {
+                cmdkey /delete:"$($vpn.ServerAddress)" 2>$null | Out-Null
+            }
+
+            # Xóa VPN
+            Remove-VpnConnection -Name $selected -AllUserConnection -Force -ErrorAction SilentlyContinue
+        
+            Write-VPNLog "Đã xóa VPN '$selected'."
+            Refresh-VPNList
+        }
+    })
+
+    # Nút Kết nối / Ngắt kết nối VPN
+    $btnConnect.Add_Click({
+        $selected = $cmbVPNList.SelectedItem
+        if (-not $selected) { return }
+
+        $vpn = Get-VpnConnection -Name $selected -AllUserConnection -ErrorAction SilentlyContinue
+        if (-not $vpn) { return }
+
+        if ($vpn.ConnectionStatus -eq "Connected") {
+            Write-VPNLog "Đang ngắt kết nối VPN '$selected'..."
+            rasdial "$selected" /disconnect | Out-Null
+            Start-Sleep -Seconds 1
+            Update-SelectedVPNInfo
+            Write-VPNLog "Đã ngắt kết nối."
+		
+    		Write-VPNLog "Đang kiểm tra kết nối tới 172.16.8.8..."
+
+    		if (Test-Connection -ComputerName "172.16.8.8" -Count 1 -Quiet)
+    		{
+    			Write-VPNLog "Ping 172.16.8.8 : Thành công"
+    		}
+    		else
+    		{
+    			Write-VPNLog "Ping 172.16.8.8 : Không phản hồi"
+    		}
+        } else {
+            Write-VPNLog "Đang kết nối tới VPN '$selected'..."
+        
+            # Lấy thông tin user/pass từ input nếu trùng tên VPN, hoặc gọi rasdial dùng Saved Credential
+            $user = $txtUser.Text.Trim()
+            $pass = $txtPass.Text
+
+            if ($txtVPNName.Text.Trim() -eq $selected -and -not [string]::IsNullOrWhiteSpace($user) -and -not [string]::IsNullOrWhiteSpace($pass)) {
+                $res = rasdial "$selected" "$user" "$pass"
+            } else {
+                $res = rasdial "$selected"
+            }
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-VPNLog "Kết nối thành công!"
+                Update-SelectedVPNInfo
+			
+    			Write-VPNLog "Đang kiểm tra kết nối tới 172.16.8.8..."
+
+    			if (Test-Connection -ComputerName "172.16.8.8" -Count 1 -Quiet)
+    			{
+    				Write-VPNLog "Ping 172.16.8.8 : Thành công"
+    			}
+    			else
+    			{
+    				Write-VPNLog "Ping 172.16.8.8 : Không phản hồi"
+    			}
+            } else {
+                Write-VPNLog "Kết nối thất bại!"
+                [System.Windows.Forms.MessageBox]::Show("Kết nối VPN thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu hoặc kết nối mạng!", "Lỗi kết nối", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+            }
+        }
+    })
+
+    # Khởi tạo giao diện lần đầu
+    $form.Add_Shown({
+        Write-VPNLog "Sẵn sàng"
+        Refresh-VPNList
+    })
+
+    # Hiển thị Form
+    [void]$form.ShowDialog()
 }
 
 while ($true) {
