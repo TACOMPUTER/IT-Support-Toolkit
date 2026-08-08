@@ -1,5 +1,9 @@
 # File này dùng để test, chạy ok thì copy nội dung vào 'IT_Github.ps1' trên GitHub
 
+# Trước tiên nó sẽ tự chép file 'IT_Github-call.exe' trên Github 'IT-Support-Toolkit/Launcher' vào 'C:\SW' và tạo shortcut trong Start
+
+# Nếu PC chạy mà không thấy '\\IT' thì dùng VPN để lấy phần mềm
+
 
 
 # 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.1 --->>>
