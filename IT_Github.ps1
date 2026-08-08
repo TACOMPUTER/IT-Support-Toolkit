@@ -1,3 +1,7 @@
+# File này dùng để test, chạy ok thì copy nội dung vào 'IT_Github.ps1' trên GitHub
+
+
+
 # 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.1 --->>>
 
 param(
@@ -72,8 +76,34 @@ if (-not $SkipAdminCheck -and -not $IsAdmin) {
 # 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.2 --->>>
 
 # Title Window
+
 $adminText = if ($IsAdmin) { "as Admin" } else { "as User" }
-$host.UI.RawUI.WindowTitle = "Running '" + (Split-Path $script:MainScript -Leaf) + "' $adminText <<< IT_Github.ps1"
+
+if ([string]::IsNullOrWhiteSpace($script:MainScript)) {
+
+    # Chạy trực tiếp từ GitHub (irm | iex)
+    $mainScriptName = "Github"
+
+}
+else {
+
+    $mainScriptPath = $script:MainScript
+
+    # UNC path: \\IT\...
+    if ($mainScriptPath -like "\\*") {
+
+        $mainScriptName = $mainScriptPath.Substring(2).Split('\')[0]
+        $mainScriptName = "\\$mainScriptName"
+
+    }
+    else {
+
+        # Local drive: C:\..., D:\...
+        $mainScriptName = Split-Path $mainScriptPath -Qualifier
+    }
+}
+
+$host.UI.RawUI.WindowTitle = "Running 'IT_Github.ps1' $adminText <<< '$mainScriptName'"
 
 # Resize Window
 $handle = [WinAPI]::GetConsoleWindow()
