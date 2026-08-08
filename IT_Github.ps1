@@ -140,6 +140,120 @@ $hPx = $rect.Bottom - $rect.Top
 
 
 
+# 🚩 <<<--- KIỂM TRA / TẠO IT_Github-call.exe + SHORTCUT --->>>
+
+$LauncherDir = "C:\SW"
+$LauncherExe = Join-Path $LauncherDir "IT_Github-call.exe"
+
+$LauncherURL = "https://raw.githubusercontent.com/TACOMPUTER/IT-Support-Toolkit/refs/heads/main/Launcher/IT_Github-call.exe"
+
+
+# ==========================================================
+# 1. Tạo C:\SW nếu chưa có
+# ==========================================================
+
+if (-not (Test-Path $LauncherDir)) {
+
+    New-Item `
+        -Path $LauncherDir `
+        -ItemType Directory `
+        -Force |
+        Out-Null
+}
+
+
+# ==========================================================
+# 2. Kiểm tra IT_Github-call.exe
+#
+# Có rồi  -> bỏ qua
+# Chưa có -> tải từ GitHub
+# ==========================================================
+
+if (-not (Test-Path $LauncherExe)) {
+
+    try {
+
+        Invoke-WebRequest `
+            -Uri $LauncherURL `
+            -OutFile $LauncherExe `
+            -UseBasicParsing `
+            -ErrorAction Stop
+
+    }
+    catch {
+
+        Write-Host ""
+        Write-Host "Không thể tải IT_Github-call.exe từ GitHub." -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+    }
+}
+
+
+# ==========================================================
+# 3. Xác định Start Menu
+# ==========================================================
+
+$StartMenuDir = Join-Path `
+    $env:APPDATA `
+    "Microsoft\Windows\Start Menu\Programs"
+
+
+if (-not (Test-Path $StartMenuDir)) {
+
+    New-Item `
+        -Path $StartMenuDir `
+        -ItemType Directory `
+        -Force |
+        Out-Null
+}
+
+
+# ==========================================================
+# 4. Xóa tất cả Shortcut IT_Github-call*.lnk
+# ==========================================================
+
+$OldShortcuts = Get-ChildItem `
+    -Path $StartMenuDir `
+    -Filter "IT_Github-call*.lnk" `
+    -File `
+    -ErrorAction SilentlyContinue
+
+
+foreach ($Shortcut in $OldShortcuts) {
+
+    Remove-Item `
+        -Path $Shortcut.FullName `
+        -Force `
+        -ErrorAction SilentlyContinue
+}
+
+
+# ==========================================================
+# 5. Tạo lại Shortcut IT_Github-call.lnk
+# ==========================================================
+
+if (Test-Path $LauncherExe) {
+
+    $ShortcutPath = Join-Path `
+        $StartMenuDir `
+        "IT_Github-call.lnk"
+
+
+    $WshShell = New-Object -ComObject WScript.Shell
+
+    $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
+
+    $Shortcut.TargetPath       = $LauncherExe
+    $Shortcut.IconLocation     = "$LauncherExe,0"
+    $Shortcut.WorkingDirectory = $LauncherDir
+
+    $Shortcut.Save()
+}
+
+
+# 🏁 <<<--- END KIỂM TRA / TẠO IT_Github-call.exe + SHORTCUT --->>>
+
+
 
 # 🚩 <<<--- XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
 
