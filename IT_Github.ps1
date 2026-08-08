@@ -131,8 +131,7 @@ try {
 
 # Move Window
 $rect = New-Object WinAPI+RECT
-# [WinAPI]::GetWindowRect($handle, [ref]$rect)
-[WinAPI]::GetWindowRect($handle, [ref]$rect) | Out-Null
+[WinAPI]::GetWindowRect($handle, [ref]$rect)
 $wPx = $rect.Right - $rect.Left
 $hPx = $rect.Bottom - $rect.Top
 [WinAPI]::MoveWindow($handle, $PosX, $PosY, $wPx, $hPx, $true) | Out-Null
