@@ -9,7 +9,7 @@
 # 🚩 <<<--- THÔNG SỐ CỬA SỔ PS P.1 --->>>
 
 param(
-    [int]$PSWidth = 90,
+    [int]$PSWidth = 93,
     [int]$PSHeight = 58,
     [int]$PosX = -8,
     [int]$PosY = 0,
@@ -232,97 +232,6 @@ if (Test-Path $LauncherExe) {
 
 
 # 🏁 <<<--- END KIỂM TRA / TẠO IT_Github-call.exe + SHORTCUT --->>>
-
-
-
-# 🚩 <<<--- XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
-
-# Thứ tự ưu tiên như sau:
-# 1. D:\~H:\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113
-# 2. \\IT\Software\OS Tools\cmd-Powershell\IT\IT-113
-# 3. \\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113
-# 4. Tất cả ổ USB (Flash/HDD/SSD)
-
-$script:IT113Script = $null
-$script:IT113Online = @()
-
-$SearchList = @()
-
-# ==========================================================
-# ƯU TIÊN 1 : OneDrive (D: -> H:)
-# ==========================================================
-foreach ($drive in 'D','E','F','G','H') {
-
-    $SearchList += "$($drive):\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
-
-}
-
-# ==========================================================
-# ƯU TIÊN 2 : Server IT
-# ==========================================================
-$SearchList += "\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
-
-# ==========================================================
-# ƯU TIÊN 3 : Server IT-E580
-# ==========================================================
-$SearchList += "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
-
-# ==========================================================
-# ƯU TIÊN 4 : USB (Flash + HDD + SSD)
-# ==========================================================
-
-$usbDrives = Get-CimInstance Win32_DiskDrive |
-Where-Object InterfaceType -eq 'USB'
-
-foreach ($disk in $usbDrives) {
-
-    $partitions = Get-CimAssociatedInstance -InputObject $disk -Association Win32_DiskDriveToDiskPartition
-
-    foreach ($partition in $partitions) {
-
-        $logicalDisks = Get-CimAssociatedInstance -InputObject $partition -Association Win32_LogicalDiskToPartition
-
-        foreach ($logicalDisk in $logicalDisks) {
-
-            $SearchList += "$($logicalDisk.DeviceID)\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
-
-        }
-    }
-}
-
-# ==========================================================
-# TÌM FILE ĐẦU TIÊN
-# ==========================================================
-
-foreach ($file in $SearchList) {
-
-    if (Test-Path $file) {
-
-        $folder = Split-Path $file -Parent
-
-        # Chỉ lấy phần đầu để hiển thị
-        if ($folder -match '^\\\\[^\\]+') {
-            $short = $matches[0]
-        }
-        elseif ($folder -match '^[A-Za-z]:') {
-            $short = $matches[0]
-        }
-        else {
-            $short = "Unknown"
-        }
-
-        if ($script:IT113Online -notcontains $short) {
-            $script:IT113Online += $short
-        }
-
-        # Chỉ gán location lần đầu (đúng thứ tự ưu tiên)
-        if (-not $script:IT113Script) {
-            $script:IT113Script = $folder
-        }
-    }
-}
-
-# 🏁 <<<--- END XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
 
 
 
@@ -727,7 +636,96 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 
 	Show-Item 2 "Current" "$env:COMPUTERNAME\$env:USERNAME"
 
-    # ===== 113 LOCATION =====
+    # 🚩 <<<--- XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
+
+	# Thứ tự ưu tiên như sau:
+	# 1. D:\~H:\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113
+	# 2. \\IT\Software\OS Tools\cmd-Powershell\IT\IT-113
+	# 3. \\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113
+	# 4. Tất cả ổ USB (Flash/HDD/SSD)
+
+	$script:IT113Script = $null
+	$script:IT113Online = @()
+
+	$SearchList = @()
+
+	# ==========================================================
+	# ƯU TIÊN 1 : OneDrive (D: -> H:)
+	# ==========================================================
+	foreach ($drive in 'D','E','F','G','H') {
+
+		$SearchList += "$($drive):\OneDrive\TACOMPUTER\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+	}
+
+	# ==========================================================
+	# ƯU TIÊN 2 : Server IT
+	# ==========================================================
+	$SearchList += "\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+	# ==========================================================
+	# ƯU TIÊN 3 : Server IT-E580
+	# ==========================================================
+	$SearchList += "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+	# ==========================================================
+	# ƯU TIÊN 4 : USB (Flash + HDD + SSD)
+	# ==========================================================
+
+	$usbDrives = Get-CimInstance Win32_DiskDrive |
+	Where-Object InterfaceType -eq 'USB'
+
+	foreach ($disk in $usbDrives) {
+
+		$partitions = Get-CimAssociatedInstance -InputObject $disk -Association Win32_DiskDriveToDiskPartition
+
+		foreach ($partition in $partitions) {
+
+			$logicalDisks = Get-CimAssociatedInstance -InputObject $partition -Association Win32_LogicalDiskToPartition
+
+			foreach ($logicalDisk in $logicalDisks) {
+
+				$SearchList += "$($logicalDisk.DeviceID)\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
+			}
+		}
+	}
+
+	# ==========================================================
+	# TÌM FILE ĐẦU TIÊN
+	# ==========================================================
+
+	foreach ($file in $SearchList) {
+
+		if (Test-Path $file) {
+
+			$folder = Split-Path $file -Parent
+
+			# Chỉ lấy phần đầu để hiển thị
+			if ($folder -match '^\\\\[^\\]+') {
+				$short = $matches[0]
+			}
+			elseif ($folder -match '^[A-Za-z]:') {
+				$short = $matches[0]
+			}
+			else {
+				$short = "Unknown"
+			}
+
+			if ($script:IT113Online -notcontains $short) {
+				$script:IT113Online += $short
+			}
+
+			# Chỉ gán location lần đầu (đúng thứ tự ưu tiên)
+			if (-not $script:IT113Script) {
+				$script:IT113Script = $folder
+			}
+		}
+	}
+
+	# 🏁 <<<--- END XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
+	
+	# ===== 113 LOCATION =====
     $loc113 = if ($script:IT113Script) {
         if ($script:IT113Script -match '^\\\\[^\\]+') { ($matches[0]) } # Lấy \\IT hoặc \\IT-E580
         elseif ($script:IT113Script -match '^[a-zA-Z]:') { ($matches[0]) } # Lấy DriverLetter:
@@ -764,10 +762,16 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 
 	# 🚩 <<<--- XUẤT THÔNG SỐ CẤU HÌNH MÁY TÍNH RA HTML VÀO LOCAL và NETWORK --->>>
 
-    $Serial = $BIOS.SerialNumber
-    $CleanModel = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
-    $Content = $script:ReportLines -join ""
-    $FileName = "{0}_{1}.html" -f $CleanModel, $Serial
+    $Serial = if ($BIOS.SerialNumber) { $BIOS.SerialNumber } else { "NoSerial" }
+
+	$CleanModel  = ($CS.Model -replace '[\\/:*?"<>|]', '').Trim()
+	$CleanSerial = ($Serial -replace '[\\/:*?"<>|]', '').Trim()
+
+	if ([string]::IsNullOrWhiteSpace($CleanModel))  { $CleanModel = "UnknownModel" }
+	if ([string]::IsNullOrWhiteSpace($CleanSerial)) { $CleanSerial = "NoSerial" }
+
+	$Content = $script:ReportLines -join ""
+	$FileName = "{0}_{1}.html" -f $CleanModel, $CleanSerial
     $HtmlContent = @"
 <!DOCTYPE html>
 <html>
@@ -801,41 +805,81 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 "@
 
     # --- 1. LUÔN LUÔN GHI BẢN LOCAL TRƯỚC ---
-    $LocalFolder = "C:\SW\Reports"
-    try {
-        if (-not (Test-Path $LocalFolder)) {
-            New-Item -Path $LocalFolder -ItemType Directory -Force | Out-Null
-        }
-        $LocalFile = Join-Path $LocalFolder $FileName
-        $HtmlContent | Set-Content $LocalFile -Encoding UTF8 -Force
-    } catch {
-        Write-Host "[LOCAL] WARNING → Khong the tao folder hoac ghi file tai o C!" -ForegroundColor Yellow
-    }
+	$LocalFolder = "C:\SW\Reports"
 
-    # --- 2. KIỂM TRA MẠNG VÀ ĐẨY TIẾP BẢN BACKUP LÊN SERVER ---
-    $ServerHost = "IT"
-    $NetworkPath = "\\$ServerHost\Guest\Computer list"
+	try {
+		if (-not (Test-Path -Path $LocalFolder -ErrorAction SilentlyContinue)) {
+			New-Item -Path $LocalFolder -ItemType Directory -Force -ErrorAction Stop | Out-Null
+		}
 
-    $isOnline = $false
-    try {
-        if (Test-Connection -ComputerName $ServerHost -Count 1 -Quiet) {
-            $isOnline = $true
-        }
-    } catch { $isOnline = $false }
+		$LocalFile = Join-Path $LocalFolder $FileName
+		$HtmlContent | Set-Content -Path $LocalFile -Encoding UTF8 -Force -ErrorAction Stop
 
-    if ($isOnline -and (Test-Path "\\$ServerHost\Guest")) {
-        try {
-            if (-not (Test-Path $NetworkPath)) {
-                New-Item -Path $NetworkPath -ItemType Directory -Force | Out-Null
-            }
-            $NetworkFile = Join-Path $NetworkPath $FileName
-            $HtmlContent | Set-Content $NetworkFile -Encoding UTF8 -Force
-        } catch {
-            Write-Host "`n[ONLINE] WARNING → Có mạng nhưng folder mạng đang chặn quyền ghi file!" -ForegroundColor Red
-        }
-    } else {
-        Write-Host "`n[OFFLINE] Khong thay Server mang '$ServerHost'. Bo qua luu ban backup tren server." -ForegroundColor DarkGray
-    }
+		Write-Host "`n[LOCAL] Da luu report tai: $LocalFile" -ForegroundColor DarkGray
+	}
+	catch {
+		Write-Host "`n[LOCAL] WARNING → Khong the tao folder hoac ghi file tai C:\SW\Reports!" -ForegroundColor Yellow
+		Write-Host "Chi tiet loi: $($_.Exception.Message)" -ForegroundColor DarkYellow
+	}
+
+
+	# --- 2. KIỂM TRA MẠNG VÀ ĐẨY TIẾP BẢN BACKUP LÊN SERVER ---
+	$ServerHost  = "IT"
+	$ShareRoot   = "\\$ServerHost\Guest"
+	$NetworkPath = Join-Path $ShareRoot "Computer list"
+
+	function Test-SmbPort {
+		param(
+			[string]$ComputerName,
+			[int]$Port = 445,
+			[int]$TimeoutMs = 1200
+		)
+
+		try {
+			$client = New-Object System.Net.Sockets.TcpClient
+			$async = $client.BeginConnect($ComputerName, $Port, $null, $null)
+			$ok = $async.AsyncWaitHandle.WaitOne($TimeoutMs, $false)
+
+			if (-not $ok) {
+				$client.Close()
+				return $false
+			}
+
+			$client.EndConnect($async)
+			$client.Close()
+			return $true
+		}
+		catch {
+			return $false
+		}
+	}
+
+	$isSmbOnline = Test-SmbPort -ComputerName $ServerHost
+
+	if ($isSmbOnline) {
+		try {
+			if (-not (Test-Path -Path $ShareRoot -ErrorAction Stop)) {
+				throw "Khong truy cap duoc share $ShareRoot"
+			}
+
+			if (-not (Test-Path -Path $NetworkPath -ErrorAction SilentlyContinue)) {
+				New-Item -Path $NetworkPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+			}
+
+			$NetworkFile = Join-Path $NetworkPath $FileName
+			$HtmlContent | Set-Content -Path $NetworkFile -Encoding UTF8 -Force -ErrorAction Stop
+
+			Write-Host "`n[ONLINE] Da luu them ban backup len server: $NetworkFile" -ForegroundColor Green
+		}
+		catch {
+			Write-Host "`n[ONLINE] WARNING → Co thay server '$ServerHost' nhung folder/share dang chan quyen ghi file!" -ForegroundColor Red
+			Write-Host "Chi tiet loi: $($_.Exception.Message)" -ForegroundColor DarkRed
+		}
+	}
+	else {
+		Write-Host "`n[OFFLINE] Khong thay SMB server '$ServerHost'. Bo qua luu ban backup tren server." -ForegroundColor DarkGray
+		Write-Host "[HINT] Neu dang o ngoai mang cong ty, nhap VPN de ket noi roi chay lai 111." -ForegroundColor DarkGray
+	}
 # 🏁 <<<--- END XUẤT THÔNG SỐ CẤU HÌNH MÁY TÍNH RA HTML VÀO LOCAL và NETWORK --->>>
 
     Write-Host ("+" * $w) -ForegroundColor DarkGray
