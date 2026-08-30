@@ -650,54 +650,72 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 	$SearchList = @()
 
 	# ==========================================================
-	# KIỂM TRA NETWORK NHANH
-	# Kiểm tra \\Server\Guest
-	# Timeout ngắn để tránh treo khi mạng đứt
+	# KIỂM TRA NETWORK SERVER
+	#
+	# 1. TCP 445 để tránh UNC bị treo khi server mất
+	# 2. Sau đó kiểm tra trực tiếp \\Server\Guest
+	#
+	# Không dùng Start-Job để kiểm tra SMB
 	# ==========================================================
 
 	function Test-NetworkServer {
 		param(
 			[string]$Server,
-			[int]$TimeoutMs = 500
+			[int]$TcpTimeoutMs = 1000
 		)
 
-		$testPath = "\\$Server\Guest"
+		# ------------------------------------------------------
+		# BƯỚC 1: Kiểm tra SMB TCP 445
+		# ------------------------------------------------------
+
+		$tcp = $null
 
 		try {
 
-			$job = Start-Job -ScriptBlock {
-				param($path)
+			$tcp = New-Object System.Net.Sockets.TcpClient
 
-				try {
-					return [bool](Test-Path $path -ErrorAction Stop)
-				}
-				catch {
-					return $false
-				}
+			$async = $tcp.BeginConnect(
+				$Server,
+				445,
+				$null,
+				$null
+			)
 
-			} -ArgumentList $testPath
-
-			if (Wait-Job $job -Timeout ($TimeoutMs / 1000) -ErrorAction SilentlyContinue) {
-
-				$result = Receive-Job $job -ErrorAction SilentlyContinue
-
-				Stop-Job $job -ErrorAction SilentlyContinue
-				Remove-Job $job -Force -ErrorAction SilentlyContinue
-
-				return [bool]$result
+			if (-not $async.AsyncWaitHandle.WaitOne($TcpTimeoutMs)) {
+				return $false
 			}
 
-			Stop-Job $job -ErrorAction SilentlyContinue
-			Remove-Job $job -Force -ErrorAction SilentlyContinue
+			if (-not $tcp.Connected) {
+				return $false
+			}
 
-			return $false
 		}
 		catch {
 
-			if ($job) {
-				Stop-Job $job -ErrorAction SilentlyContinue
-				Remove-Job $job -Force -ErrorAction SilentlyContinue
+			return $false
+		}
+		finally {
+
+			if ($tcp) {
+				$tcp.Close()
 			}
+		}
+
+
+		# ------------------------------------------------------
+		# BƯỚC 2: Server có SMB → kiểm tra Guest
+		# ------------------------------------------------------
+
+		try {
+
+			$guestPath = "\\$Server\Guest"
+
+			return [bool](Test-Path `
+				-LiteralPath $guestPath `
+				-ErrorAction Stop)
+
+		}
+		catch {
 
 			return $false
 		}
@@ -712,10 +730,12 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 
 	foreach ($server in 'IT','IT-E580') {
 
-		$NetworkStatus[$server] = Test-NetworkServer $server 500
+		$NetworkStatus[$server] = Test-NetworkServer $server 1000
 
 		if ($NetworkStatus[$server]) {
+
 			$script:IT113Online += "\\$server"
+
 		}
 	}
 
