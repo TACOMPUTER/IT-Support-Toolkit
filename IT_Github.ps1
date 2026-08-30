@@ -650,6 +650,77 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 	$SearchList = @()
 
 	# ==========================================================
+	# KIỂM TRA NETWORK NHANH
+	# Kiểm tra \\Server\Guest
+	# Timeout ngắn để tránh treo khi mạng đứt
+	# ==========================================================
+
+	function Test-NetworkServer {
+		param(
+			[string]$Server,
+			[int]$TimeoutMs = 500
+		)
+
+		$testPath = "\\$Server\Guest"
+
+		try {
+
+			$job = Start-Job -ScriptBlock {
+				param($path)
+
+				try {
+					return [bool](Test-Path $path -ErrorAction Stop)
+				}
+				catch {
+					return $false
+				}
+
+			} -ArgumentList $testPath
+
+			if (Wait-Job $job -Timeout ($TimeoutMs / 1000) -ErrorAction SilentlyContinue) {
+
+				$result = Receive-Job $job -ErrorAction SilentlyContinue
+
+				Stop-Job $job -ErrorAction SilentlyContinue
+				Remove-Job $job -Force -ErrorAction SilentlyContinue
+
+				return [bool]$result
+			}
+
+			Stop-Job $job -ErrorAction SilentlyContinue
+			Remove-Job $job -Force -ErrorAction SilentlyContinue
+
+			return $false
+		}
+		catch {
+
+			if ($job) {
+				Stop-Job $job -ErrorAction SilentlyContinue
+				Remove-Job $job -Force -ErrorAction SilentlyContinue
+			}
+
+			return $false
+		}
+	}
+
+
+	# ==========================================================
+	# KIỂM TRA NETWORK TRƯỚC
+	# ==========================================================
+
+	$NetworkStatus = @{}
+
+	foreach ($server in 'IT','IT-E580') {
+
+		$NetworkStatus[$server] = Test-NetworkServer $server 500
+
+		if ($NetworkStatus[$server]) {
+			$script:IT113Online += "\\$server"
+		}
+	}
+
+
+	# ==========================================================
 	# ƯU TIÊN 1 : OneDrive (D: -> H:)
 	# ==========================================================
 	foreach ($drive in 'D','E','F','G','H') {
@@ -658,15 +729,18 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 
 	}
 
+
 	# ==========================================================
 	# ƯU TIÊN 2 : Server IT
 	# ==========================================================
 	$SearchList += "\\IT\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
 
+
 	# ==========================================================
 	# ƯU TIÊN 3 : Server IT-E580
 	# ==========================================================
 	$SearchList += "\\IT-E580\Software\OS Tools\cmd-Powershell\IT\IT-113\IT-113.ps1"
+
 
 	# ==========================================================
 	# ƯU TIÊN 4 : USB (Flash + HDD + SSD)
@@ -677,11 +751,15 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 
 	foreach ($disk in $usbDrives) {
 
-		$partitions = Get-CimAssociatedInstance -InputObject $disk -Association Win32_DiskDriveToDiskPartition
+		$partitions = Get-CimAssociatedInstance `
+			-InputObject $disk `
+			-Association Win32_DiskDriveToDiskPartition
 
 		foreach ($partition in $partitions) {
 
-			$logicalDisks = Get-CimAssociatedInstance -InputObject $partition -Association Win32_LogicalDiskToPartition
+			$logicalDisks = Get-CimAssociatedInstance `
+				-InputObject $partition `
+				-Association Win32_LogicalDiskToPartition
 
 			foreach ($logicalDisk in $logicalDisks) {
 
@@ -691,15 +769,36 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 		}
 	}
 
+
 	# ==========================================================
 	# TÌM FILE ĐẦU TIÊN
 	# ==========================================================
 
 	foreach ($file in $SearchList) {
 
-		if (Test-Path $file) {
+		# ------------------------------------------------------
+		# UNC
+		# ------------------------------------------------------
+
+		if ($file -match '^\\\\([^\\]+)\\') {
+
+			$server = $matches[1]
+
+			# Server đã xác định offline → bỏ qua ngay
+			if (-not $NetworkStatus[$server]) {
+				continue
+			}
+		}
+
+
+		# ------------------------------------------------------
+		# Kiểm tra file
+		# ------------------------------------------------------
+
+		if (Test-Path $file -ErrorAction SilentlyContinue) {
 
 			$folder = Split-Path $file -Parent
+
 
 			# Chỉ lấy phần đầu để hiển thị
 			if ($folder -match '^\\\\[^\\]+') {
@@ -712,42 +811,70 @@ AND (Name LIKE 'Windows%' OR Name LIKE 'Office%')
 				$short = "Unknown"
 			}
 
+
 			if ($script:IT113Online -notcontains $short) {
 				$script:IT113Online += $short
 			}
 
-			# Chỉ gán location lần đầu (đúng thứ tự ưu tiên)
+
+			# Chỉ gán location lần đầu
+			# (đúng thứ tự ưu tiên)
 			if (-not $script:IT113Script) {
 				$script:IT113Script = $folder
 			}
 		}
 	}
 
+
 	# 🏁 <<<--- END XÁC ĐỊNH VỊ TRÍ IT-113.ps1 --->>>
-	
+
+
 	# ===== 113 LOCATION =====
-    $loc113 = if ($script:IT113Script) {
-        if ($script:IT113Script -match '^\\\\[^\\]+') { ($matches[0]) } # Lấy \\IT hoặc \\IT-E580
-        elseif ($script:IT113Script -match '^[a-zA-Z]:') { ($matches[0]) } # Lấy DriverLetter:
-        else { "Local/Unknown" }
-    } else { "Offline" }
+
+	$loc113 = if ($script:IT113Script) {
+
+		if ($script:IT113Script -match '^\\\\[^\\]+') {
+			$matches[0]
+		}
+		elseif ($script:IT113Script -match '^[a-zA-Z]:') {
+			$matches[0]
+		}
+		else {
+			"Local/Unknown"
+		}
+
+	}
+	else {
+		"Offline"
+	}
+
 
 	Write-Log "`n"
 
 	Show-Item 1 "113 LOCATION"
 
+
 	if ($script:IT113Online.Count) {
 
-		$online113 = $script:IT113Online | ForEach-Object {
+		# ======================================================
+		# ĐƯA LOCATION (in use) LÊN ĐẦU
+		# ======================================================
 
-			if ($_ -eq $loc113) {
-				"$_ (in use)"
-			}
-			else {
-				$_
-			}
+		$online113 = @()
 
+		# In-use trước
+		if ($script:IT113Online -contains $loc113) {
+			$online113 += "$loc113 (in use)"
 		}
+
+		# Sau đó các location Online còn lại
+		foreach ($location in $script:IT113Online) {
+
+			if ($location -ne $loc113) {
+				$online113 += $location
+			}
+		}
+
 
 		Show-Item 2 "Online" ($online113 -join " | ")
 
@@ -1217,10 +1344,80 @@ function GoTo-IT-VPN {
 
         Write-VPNLog "Đang tạo VPN '$name' ($server)..."
 
-        # Xóa VPN cũ nếu trùng tên
-        Get-VpnConnection -AllUserConnection -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $name } | ForEach-Object {
-            Remove-VpnConnection -Name $_.Name -AllUserConnection -Force -ErrorAction SilentlyContinue
-        }
+        # ==========================================================
+		# XÓA VPN CŨ NẾU TRÙNG TÊN
+		# ==========================================================
+
+		$oldVPN = Get-VpnConnection `
+			-Name $name `
+			-AllUserConnection `
+			-ErrorAction SilentlyContinue
+
+		if ($oldVPN) {
+
+			Write-VPNLog "VPN '$name' đã tồn tại. Đang xóa cấu hình cũ..."
+
+			# Ngắt đúng VPN này
+			rasdial "$name" /disconnect 2>$null | Out-Null
+
+			Start-Sleep -Milliseconds 500
+
+			try {
+
+				Remove-VpnConnection `
+					-Name $name `
+					-AllUserConnection `
+					-Force `
+					-ErrorAction Stop
+
+			}
+			catch {
+
+				Write-VPNLog "Không thể xóa VPN cũ: $($_.Exception.Message)"
+
+				[System.Windows.Forms.MessageBox]::Show(
+					"Không thể xóa VPN cũ '$name'.`n`n$($_.Exception.Message)",
+					"Lỗi",
+					[System.Windows.Forms.MessageBoxButtons]::OK,
+					[System.Windows.Forms.MessageBoxIcon]::Error
+				)
+
+				return
+			}
+
+			# Chờ xác nhận profile biến mất
+			$deleted = $false
+
+			for ($i = 1; $i -le 10; $i++) {
+
+				Start-Sleep -Milliseconds 200
+
+				if (-not (Get-VpnConnection `
+					-Name $name `
+					-AllUserConnection `
+					-ErrorAction SilentlyContinue)) {
+
+					$deleted = $true
+					break
+				}
+			}
+
+			if (-not $deleted) {
+
+				Write-VPNLog "VPN cũ '$name' vẫn còn tồn tại. Hủy tạo VPN mới."
+
+				[System.Windows.Forms.MessageBox]::Show(
+					"VPN '$name' chưa được Windows xóa hoàn toàn.`n`nKhông tạo VPN mới để tránh lỗi cấu hình/port.",
+					"Không thể tạo VPN",
+					[System.Windows.Forms.MessageBoxButtons]::OK,
+					[System.Windows.Forms.MessageBoxIcon]::Error
+				)
+
+				return
+			}
+
+			Write-VPNLog "Đã xóa cấu hình VPN cũ."
+		}
 
         try {
             # Tạo kết nối VPN
@@ -1249,34 +1446,146 @@ function GoTo-IT-VPN {
         }
     })
 
-    # Nút Xóa VPN
-    $btnDelete.Add_Click({
-        $selected = $cmbVPNList.SelectedItem
-        if (-not $selected) {
-            [System.Windows.Forms.MessageBox]::Show("Vui lòng chọn VPN cần xóa từ danh sách!", "Thông báo", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
-            return
-        }
+	# Nút Xóa VPN
+	$btnDelete.Add_Click({
+		$selected = $cmbVPNList.SelectedItem
 
-        $confirm = [System.Windows.Forms.MessageBox]::Show("Bạn có chắc chắn muốn xóa VPN '$selected'?", "Xác nhận xóa", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
-        if ($confirm -eq [System.Windows.Forms.DialogResult]::Yes) {
-            Write-VPNLog "Đang xóa VPN '$selected'..."
+		if (-not $selected) {
+			[System.Windows.Forms.MessageBox]::Show(
+				"Vui lòng chọn VPN cần xóa từ danh sách!",
+				"Thông báo",
+				[System.Windows.Forms.MessageBoxButtons]::OK,
+				[System.Windows.Forms.MessageBoxIcon]::Warning
+			)
+			return
+		}
 
-            # Ngắt kết nối nếu đang kết nối
-            rasdial /disconnect | Out-Null
+		$confirm = [System.Windows.Forms.MessageBox]::Show(
+			"Bạn có chắc chắn muốn xóa VPN '$selected'?",
+			"Xác nhận xóa",
+			[System.Windows.Forms.MessageBoxButtons]::YesNo,
+			[System.Windows.Forms.MessageBoxIcon]::Question
+		)
 
-            # Lấy server để xóa cmdkey
-            $vpn = Get-VpnConnection -Name $selected -AllUserConnection -ErrorAction SilentlyContinue
-            if ($vpn) {
-                cmdkey /delete:"$($vpn.ServerAddress)" 2>$null | Out-Null
-            }
+		if ($confirm -ne [System.Windows.Forms.DialogResult]::Yes) {
+			return
+		}
 
-            # Xóa VPN
-            Remove-VpnConnection -Name $selected -AllUserConnection -Force -ErrorAction SilentlyContinue
-        
-            Write-VPNLog "Đã xóa VPN '$selected'."
-            Refresh-VPNList
-        }
-    })
+		Write-VPNLog "Đang xóa VPN '$selected'..."
+
+		# ======================================================
+		# 1. Lấy thông tin VPN trước khi xóa
+		# ======================================================
+
+		$vpn = Get-VpnConnection `
+			-Name $selected `
+			-AllUserConnection `
+			-ErrorAction SilentlyContinue
+
+		$serverAddress = $null
+
+		if ($vpn) {
+			$serverAddress = $vpn.ServerAddress
+		}
+
+		# ======================================================
+		# 2. Ngắt đúng VPN đang chọn
+		# ======================================================
+
+		rasdial "$selected" /disconnect 2>$null | Out-Null
+
+		# Cho RAS một khoảng rất ngắn để giải phóng connection
+		Start-Sleep -Milliseconds 500
+
+		# ======================================================
+		# 3. Xóa Credential nếu có
+		# ======================================================
+
+		if ($serverAddress) {
+			cmdkey /delete:"$serverAddress" 2>$null | Out-Null
+		}
+
+		# ======================================================
+		# 4. Xóa VPN
+		# ======================================================
+
+		try {
+
+			Remove-VpnConnection `
+				-Name $selected `
+				-AllUserConnection `
+				-Force `
+				-ErrorAction Stop
+
+		}
+		catch {
+
+			Write-VPNLog "Lỗi xóa VPN '$selected': $($_.Exception.Message)"
+
+			[System.Windows.Forms.MessageBox]::Show(
+				"Không thể xóa VPN '$selected'.`n`n$($_.Exception.Message)",
+				"Lỗi xóa VPN",
+				[System.Windows.Forms.MessageBoxButtons]::OK,
+				[System.Windows.Forms.MessageBoxIcon]::Error
+			)
+
+			Refresh-VPNList
+			return
+		}
+
+		# ======================================================
+		# 5. XÁC NHẬN WINDOWS ĐÃ XÓA THẬT
+		# ======================================================
+
+		$removed = $false
+
+		for ($i = 1; $i -le 5; $i++) {
+
+			Start-Sleep -Milliseconds 200
+
+			$check = Get-VpnConnection `
+				-Name $selected `
+				-AllUserConnection `
+				-ErrorAction SilentlyContinue
+
+			if (-not $check) {
+				$removed = $true
+				break
+			}
+		}
+
+		# ======================================================
+		# 6. KẾT QUẢ THỰC TẾ
+		# ======================================================
+
+		if ($removed) {
+
+			Write-VPNLog "Đã xóa VPN '$selected' thành công."
+
+			Refresh-VPNList
+
+			[System.Windows.Forms.MessageBox]::Show(
+				"Đã xóa VPN '$selected' thành công!",
+				"Thông báo",
+				[System.Windows.Forms.MessageBoxButtons]::OK,
+				[System.Windows.Forms.MessageBoxIcon]::Information
+			)
+
+		}
+		else {
+
+			Write-VPNLog "CẢNH BÁO: Windows vẫn còn VPN '$selected' sau khi xóa."
+
+			Refresh-VPNList
+
+			[System.Windows.Forms.MessageBox]::Show(
+				"Windows vẫn còn VPN '$selected' sau khi thực hiện xóa.`n`nVui lòng Refresh VPN để kiểm tra lại.",
+				"Xóa VPN chưa hoàn tất",
+				[System.Windows.Forms.MessageBoxButtons]::OK,
+				[System.Windows.Forms.MessageBoxIcon]::Warning
+			)
+		}
+	})
 
     # Nút Kết nối / Ngắt kết nối VPN
     $btnConnect.Add_Click({
